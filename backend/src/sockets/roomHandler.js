@@ -1,0 +1,868 @@
+import {
+  createRoom,
+  joinRoom,
+  changePlayerColor,
+  removePlayer,
+  startGame,
+  rollDice,
+  buyProperty,
+  declineProperty,
+  buildHouse,
+  sendTradeOffer,
+  respondTradeOffer,
+  tradeWithState,
+  processMaterial,
+  stockMall,
+  bankAction,
+  jailAction,
+  sellPropertyToState,
+  startAuction,
+  placeBid,
+  chanceCardDecision,
+  startSpecialAuction,
+  finishAuctionEarly,
+  renameBusiness,
+  sendSwapOffer,
+  respondSwapOffer,
+  submitBorsaInvestment,
+  getRoomBySocketId
+} from '../state/roomStore.js';
+
+/**
+ * Socket.io Oda, Lobi ve Çekirdek Oyun Motoru (Faz 2 & Faz 3) Olay Dinleyicileri
+ */
+export function registerRoomHandlers(io, socket) {
+  console.log(`[Socket Bağlandı]: ${socket.id}`);
+
+  socket.on('client:createRoom', ({ name, colorId }, callback = () => {}) => {
+    const result = createRoom(socket.id, name, colorId);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room } = result;
+    Object.defineProperty(room, 'ioInstance', { value: io, enumerable: false, writable: true, configurable: true });
+    socket.join(room.code);
+
+    console.log(`[Oda Kuruldu]: ${room.code} - Host: ${name} (${socket.id}) - Renk: ${room.players[0]?.color?.name}`);
+
+    callback({ success: true, room });
+    io.to(room.code).emit('server:roomUpdate', {
+      roomCode: room.code,
+      players: room.players,
+      isStarted: room.isStarted,
+      gameState: room.gameState
+    });
+  });
+
+  socket.on('client:joinRoom', ({ code, name, colorId }, callback = () => {}) => {
+    const result = joinRoom(code, socket.id, name, colorId);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room } = result;
+    Object.defineProperty(room, 'ioInstance', { value: io, enumerable: false, writable: true, configurable: true });
+    socket.join(room.code);
+
+    console.log(`[Odaya Katıldı]: ${room.code} - Oyuncu: ${name} (${socket.id})`);
+
+    callback({ success: true, room });
+    io.to(room.code).emit('server:roomUpdate', {
+      roomCode: room.code,
+      players: room.players,
+      isStarted: room.isStarted,
+      gameState: room.gameState
+    });
+  });
+
+  socket.on('client:changeColor', ({ colorId }, callback = () => {}) => {
+    const result = changePlayerColor(socket.id, colorId);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room } = result;
+    io.to(room.code).emit('server:roomUpdate', {
+      roomCode: room.code,
+      players: room.players,
+      isStarted: room.isStarted,
+      gameState: room.gameState
+    });
+    callback({ success: true, room });
+  });
+
+  socket.on('client:startGame', (callback = () => {}) => {
+    const result = startGame(socket.id);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room } = result;
+    Object.defineProperty(room, 'ioInstance', { value: io, enumerable: false, writable: true, configurable: true });
+    console.log(`[Oyun Başladı]: ${room.code} - ${room.players.length} yatırımcı tahtada`);
+
+    callback({ success: true, room });
+    io.to(room.code).emit('server:gameStarted', {
+      roomCode: room.code,
+      players: room.players,
+      gameState: room.gameState,
+      startedAt: new Date()
+    });
+  });
+
+  /**
+   * client:rollDice - Faz 2 & Faz 3: Zar atışı, piyon hareketi, maaş ve kira/teklif tetikleyicisi
+   */
+  socket.on('client:rollDice', (callback = () => {}) => {
+    const result = rollDice(socket.id);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const {
+      room,
+      playerId,
+      playerName,
+      dice,
+      diceTotal,
+      oldPosition,
+      newPosition,
+      isDouble,
+      passedGo,
+      salaryAmount,
+      newBalance,
+      currentTurnIndex,
+      activePlayerId,
+      offerProperty,
+      rentPaidData
+    } = result;
+
+    console.log(`[Zar Atışı]: ${room.code} - ${playerName}: [${dice[0]}-${dice[1]}] (${diceTotal}) -> Yeni Konum: #${newPosition}${isDouble ? ' (Çift Zar!)' : ''}`);
+
+    // 1. Zar sonucunu ve piyon hareketini bildir
+    io.to(room.code).emit('server:diceRolled', {
+      playerId,
+      playerName,
+      dice,
+      diceTotal,
+      oldPosition,
+      newPosition,
+      isDouble
+    });
+
+    // 2. Başlangıçtan geçildiyse maaş bildir
+    if (passedGo) {
+      io.to(room.code).emit('server:balanceUpdated', {
+        playerId,
+        newBalance,
+        salaryAmount,
+        reason: 'Başlangıç (GO) karesinden geçiş maaşı'
+      });
+    }
+
+    // 3. Eğer sahipsiz bir şehre gelindiyse teklif modalını aç
+    if (offerProperty) {
+      console.log(`[Satın Alma Teklifi]: ${room.code} - ${playerName} için #${offerProperty.id} - ${offerProperty.name} (${offerProperty.price} ₺)`);
+      io.to(room.code).emit('server:offerProperty', {
+        playerId,
+        playerName,
+        property: offerProperty
+      });
+    } else if (result.showChanceCard) {
+      console.log(`[Şans Kartı Çekildi]: ${room.code} - ${playerName} için Kart #${result.showChanceCard.id} - ${result.showChanceCard.title}`);
+      io.to(room.code).emit('server:showChanceCard', {
+        playerId,
+        playerName,
+        card: result.showChanceCard
+      });
+    } else if (rentPaidData) {
+      // 4. Dolu mülke gelindiyse ve kira ödendiyse bildir
+      console.log(`[Kira Ödemesi]: ${room.code} - ${rentPaidData.payerName} -> ${rentPaidData.receiverName}: ${rentPaidData.amount} ₺ (${rentPaidData.propertyName})`);
+      io.to(room.code).emit('server:rentPaid', rentPaidData);
+    }
+
+    if (result.taxPaid > 0) {
+      console.log(`[Vergi Kesintisi]: ${room.code} - ${playerName} ${result.taxPaid} ₺ vergi ödedi.`);
+      io.to(room.code).emit('server:log', { time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), text: `${playerName}, Hazine/Servet vergisinden tam ${result.taxPaid.toLocaleString('tr-TR')} ₺ ödedi!`, type: 'warning', id: Date.now().toString() });
+    }
+
+    if (result.bankInterestReturn > 0) {
+      console.log(`[Banka Faiz Dönüşü]: ${room.code} - ${playerName} ${result.bankInterestReturn} ₺ faizli mevduat aldı.`);
+      io.to(room.code).emit('server:log', { time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), text: `${playerName}, Merkez Bankası'ndaki mevduatını +%40 faizle toplam ${result.bankInterestReturn.toLocaleString('tr-TR')} ₺ olarak tahsil etti!`, type: 'success', id: Date.now().toString() });
+    }
+
+    if (result.sentToJail || newPosition === 13) {
+      const reasonText = result.sentToJail ? 'Gümrük Kapısından Doğrudan Sevk (#33 -> #13)' : 'Hapis/Gözaltı Karesine Ulaşıldı (#13)';
+      if (result.sentToJail) {
+        console.log(`[Sayıştay/Gümrük Hapis]: ${room.code} - ${playerName} hapse gönderildi.`);
+        io.to(room.code).emit('server:log', { time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), text: `${playerName}, Gümrük/Sayıştay ihlali nedeniyle doğrudan Hapse (#13) gönderildi!`, type: 'warning', id: Date.now().toString() });
+      }
+      io.to(room.code).emit('server:playerJailed', {
+        playerId,
+        playerName,
+        reason: reasonText
+      });
+    }
+
+    if (result.jailStay) {
+      io.to(room.code).emit('server:log', { time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), text: `${playerName}, hapiste çift zar atamadı ve sırası geçti (${room.gameState.jailState[socket.id]?.turnsServed}. tur).`, type: 'warning', id: Date.now().toString() });
+    }
+
+    // Borsa/Halka Arz (#19) bildirimi
+    if (result.waitingForBorsa) {
+      io.to(room.code).emit('server:borsaOpportunity', {
+        playerId,
+        playerName,
+        squareId: result.waitingForBorsa.squareId
+      });
+    }
+
+    // Liman (#5) sahipsiz — 5 turluk kiralama ihalesi bildirimi
+    if (result.waitingForPortLease) {
+      io.to(room.code).emit('server:portLeaseOpportunity', {
+        playerId,
+        playerName,
+        squareId: 5
+      });
+    }
+
+    // 5. Eğer teklif veya şans kartı kararı beklenmiyorsa sıra durumunu güncelle
+    if (!offerProperty && !result.showChanceCard && !result.waitingForBorsa && !result.waitingForPortLease) {
+      io.to(room.code).emit('server:turnUpdated', {
+        currentTurnIndex,
+        activePlayerId,
+        isDouble,
+        previousPlayerName: playerName
+      });
+    }
+
+    // 6. Genel durumu senkronize et
+    io.to(room.code).emit('server:gameStateUpdate', {
+      gameState: room.gameState
+    });
+
+    callback({ success: true, result });
+  });
+
+
+  /**
+   * client:buyProperty - Faz 3: Teklif edilen şehri satın alma
+   */
+  socket.on('client:buyProperty', ({ propertyId, useLoan }, callback = () => {}) => {
+    const result = buyProperty(socket.id, Number(propertyId), !!useLoan);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room, playerId, playerName, propertyName, price, newBalance, currentTurnIndex, activePlayerId } = result;
+
+    console.log(`[Satın Alındı]: ${room.code} - ${playerName}, ${propertyName} şehrini ${price} ₺ bedelle (Kredi: ${useLoan ? 'EVET' : 'HAYIR'}) portföyüne ekledi!`);
+
+    io.to(room.code).emit('server:propertyBought', {
+      playerId,
+      playerName,
+      propertyId: Number(propertyId),
+      propertyName,
+      price,
+      useLoan: !!useLoan,
+      newBalance
+    });
+
+    io.to(room.code).emit('server:turnUpdated', {
+      currentTurnIndex,
+      activePlayerId,
+      isDouble: false,
+      previousPlayerName: playerName
+    });
+
+    io.to(room.code).emit('server:gameStateUpdate', {
+      gameState: room.gameState
+    });
+
+    callback({ success: true, result });
+  });
+
+  /**
+   * client:declineProperty - Faz 3: Satın almayı reddedip turu geçme
+   */
+  socket.on('client:declineProperty', ({ propertyId }, callback = () => {}) => {
+    const result = declineProperty(socket.id, Number(propertyId));
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room, playerId, playerName, propertyName, currentTurnIndex, activePlayerId } = result;
+
+    console.log(`[Satın Alma Reddedildi]: ${room.code} - ${playerName}, ${propertyName} şehrini almadı.`);
+
+    io.to(room.code).emit('server:propertyDeclined', {
+      playerId,
+      playerName,
+      propertyId: Number(propertyId),
+      propertyName
+    });
+
+    io.to(room.code).emit('server:turnUpdated', {
+      currentTurnIndex,
+      activePlayerId,
+      isDouble: false,
+      previousPlayerName: playerName
+    });
+
+    io.to(room.code).emit('server:gameStateUpdate', {
+      gameState: room.gameState
+    });
+
+    callback({ success: true, result });
+  });
+
+  /**
+   * client:buildHouse - Faz 3: Tekel olunan şehre ev/otel dikme
+   */
+  socket.on('client:buildHouse', ({ propertyId }, callback = () => {}) => {
+    const result = buildHouse(socket.id, Number(propertyId));
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room, playerId, playerName, propertyName, houseCount, housePrice, newBalance } = result;
+
+    console.log(`[İnşaat Yapıldı]: ${room.code} - ${playerName}, ${propertyName} üzerine ${houseCount === 5 ? 'OTEL ⭐️' : `${houseCount}. Ev 🏠`} dikti!`);
+
+    io.to(room.code).emit('server:houseBuilt', {
+      playerId,
+      playerName,
+      propertyId: Number(propertyId),
+      propertyName,
+      houseCount,
+      housePrice,
+      newBalance
+    });
+
+    io.to(room.code).emit('server:gameStateUpdate', {
+      gameState: room.gameState
+    });
+
+    callback({ success: true, result });
+  });
+
+  /**
+   * client:sendTradeOffer - Faz 4: İşletmeler arası ticaret (hammadde/ürün) teklifi
+   */
+  socket.on('client:sendTradeOffer', ({ toId, itemType, price }, callback = () => {}) => {
+    const result = sendTradeOffer(socket.id, toId, itemType, price);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room, offer } = result;
+    console.log(`[Ticaret Teklifi]: ${room.code} - ${offer.fromName} -> ${offer.toName}: ${offer.itemType} (${offer.price} ₺)`);
+
+    io.to(room.code).emit('server:receiveTradeOffer', offer);
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+
+    callback({ success: true, result });
+  });
+
+  /**
+   * client:respondTradeOffer - Faz 4: Ticaret teklifini kabul / reddetme
+   */
+  socket.on('client:respondTradeOffer', ({ offerId, accepted }, callback = () => {}) => {
+    const result = respondTradeOffer(socket.id, offerId, accepted);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room, offer } = result;
+    console.log(`[Ticaret Teklif Cevabı]: ${room.code} - ${offer.toName}, ${offer.fromName} teklifini ${result.accepted ? 'KABUL ETTİ ✅' : 'REDDETTİ ❌'}`);
+
+    io.to(room.code).emit('server:tradeOfferResolved', {
+      accepted: result.accepted,
+      offer,
+      newBuyerBalance: result.newBuyerBalance,
+      newSellerBalance: result.newSellerBalance
+    });
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+
+    callback({ success: true, result });
+  });
+
+  /**
+   * client:tradeWithState - Faz 4: Devletle ithalat / ihracat
+   */
+  socket.on('client:tradeWithState', ({ action }, callback = () => {}) => {
+    const result = tradeWithState(socket.id, action);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room } = result;
+    const player = room.players.find(p => p.id === socket.id);
+    console.log(`[Devlet Ticareti]: ${room.code} - ${player?.name} eylemi gerçekleştirdi: ${action}`);
+
+    io.to(room.code).emit('server:stateTradeCompleted', {
+      playerId: socket.id,
+      playerName: player?.name,
+      action,
+      newBalance: result.newBalance,
+      tradeState: result.tradeState
+    });
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+
+    callback({ success: true, result });
+  });
+
+  /**
+   * client:processMaterial - Faz 4: Fabrikada hammadde işleme
+   */
+  socket.on('client:processMaterial', (callback = () => {}) => {
+    const result = processMaterial(socket.id);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room } = result;
+    const player = room.players.find(p => p.id === socket.id);
+    console.log(`[Fabrika Üretimi]: ${room.code} - ${player?.name} 1 hammadde işleyerek 1 bitmiş ürün üretti!`);
+
+    io.to(room.code).emit('server:materialProcessed', {
+      playerId: socket.id,
+      playerName: player?.name,
+      tradeState: result.tradeState
+    });
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+
+    callback({ success: true, result });
+  });
+
+  /**
+   * client:stockMall - Faz 4: AVM Vitrine Mal Koyma
+   */
+  socket.on('client:stockMall', (callback = () => {}) => {
+    const result = stockMall(socket.id);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room } = result;
+    const player = room.players.find(p => p.id === socket.id);
+    console.log(`[AVM Vitrin Düzme]: ${room.code} - ${player?.name} AVM vitrine ürün koydu (Dolu tur süresi +3)`);
+
+    io.to(room.code).emit('server:mallStocked', {
+      playerId: socket.id,
+      playerName: player?.name,
+      tradeState: result.tradeState
+    });
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+
+    callback({ success: true, result });
+  });
+
+  /**
+   * FAZ 5: Merkez Bankası İşlemleri (client:bankAction)
+   */
+  socket.on('client:bankAction', ({ action, data }, callback = () => {}) => {
+    const result = bankAction(socket.id, action, data);
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+    const { room } = result;
+    io.to(room.code).emit('server:bankUpdate', { bankState: result.bankState, newBalance: result.newBalance, playerId: socket.id, action });
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    callback({ success: true, result });
+  });
+
+  /**
+   * FAZ 5: Hapis/Kefalet İşlemleri (client:jailAction)
+   */
+  socket.on('client:jailAction', ({ action }, callback = () => {}) => {
+    const result = jailAction(socket.id, action);
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+    const { room } = result;
+    io.to(room.code).emit('server:jailUpdate', {
+      jailState: room.gameState.jailState,
+      newBalance: result.newBalance,
+      playerId: socket.id,
+      action: result.action,
+      result: result.result,
+      message: result.message
+    });
+    if (result.message) {
+      io.to(room.code).emit('server:logMessage', {
+        message: `🚨 [Gözaltı İşlemi]: ${result.message}`,
+        type: result.result === 'fail' ? 'warning' : 'success'
+      });
+    }
+    if (result.action === 'bribe_attempt' && result.result === 'fail') {
+      io.to(room.code).emit('server:turnUpdated', {
+        currentTurnIndex: result.currentTurnIndex,
+        activePlayerId: result.activePlayerId,
+        isDouble: false
+      });
+    }
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    callback({ success: true, result });
+  });
+
+  /**
+   * FAZ 5: Borç Modunda Devlete Acil Mülk Satışı (client:sellPropertyToState)
+   */
+  socket.on('client:sellPropertyToState', ({ propertyId }, callback = () => {}) => {
+    const result = sellPropertyToState(socket.id, Number(propertyId));
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+    const { room } = result;
+    io.to(room.code).emit('server:propertySoldToState', { playerId: socket.id, propertyId: Number(propertyId), emergencyCash: result.emergencyCash, newBalance: result.newBalance });
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    callback({ success: true, result });
+  });
+
+  /**
+   * FAZ 5: İhale Başlatma (client:startAuction)
+   */
+  socket.on('client:startAuction', ({ propertyId }, callback = () => {}) => {
+    const result = startAuction(socket.id, Number(propertyId), io);
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+    const { room, auction } = result;
+    console.log(`[İhale Başladı]: ${room.code} - #${auction.propertyId} ${auction.propertyName} (${auction.startingPrice} ₺ bedelle ihaleye çıktı)`);
+    io.to(room.code).emit('server:auctionStarted', { auction });
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    callback({ success: true, result });
+  });
+
+  /**
+   * FAZ 5: İhaleye Teklif Verme (client:placeBid)
+   */
+  socket.on('client:placeBid', ({ bidAmount }, callback = () => {}) => {
+    const result = placeBid(socket.id, Number(bidAmount));
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+    const { room, auction } = result;
+    io.to(room.code).emit('server:auctionTick', {
+      timeLeft: auction.timeLeft,
+      currentBid: auction.currentBid,
+      highestBidderId: auction.highestBidderId,
+      highestBidderName: auction.highestBidderName,
+      propertyName: auction.propertyName,
+      propertyId: auction.propertyId,
+      sellerId: auction.sellerId
+    });
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    callback({ success: true, result });
+  });
+
+  /**
+   * client:finishAuctionEarly - Faz 9 / Geri Dönüşler Faz 2: İhaleyi satıcı için erken bitirme
+   */
+  socket.on('client:finishAuctionEarly', (callback = () => {}) => {
+    const result = finishAuctionEarly(socket.id, io);
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+    io.to(result.room.code).emit('server:gameStateUpdate', { gameState: result.room.gameState });
+    callback({ success: true });
+  });
+
+  /**
+   * client:startPortLeaseAuction - Liman (#5) 5 Turluk Kiralama İhalesi Başlatma
+   */
+  socket.on('client:startPortLeaseAuction', (callback = () => {}) => {
+    const room = getRoomBySocketId(socket.id);
+    if (!room || !room.isStarted || !room.gameState) {
+      socket.emit('server:error', { message: 'Oyun aktif değil.' });
+      return callback({ success: false });
+    }
+    if (!room.gameState.waitingForPortLease) {
+      socket.emit('server:error', { message: 'Liman kiralama ihalesi için uygun durum yok.' });
+      return callback({ success: false });
+    }
+
+    const isDouble = room.gameState.waitingForPortLease.isDouble;
+    room.gameState.waitingForPortLease = null;
+
+    // Liman için özel 30s kiralama ihalesi (sahiplik DEĞİL, 5 turluk kiralama hakkı)
+    const portAuction = {
+      id: 'port_' + Date.now().toString(),
+      propertyId: 5,
+      propertyName: 'Uluslararası Liman (5 Turluk Kiralama)',
+      sellerId: null, // Devlet ihalesi
+      sellerName: 'Devlet / Liman İşletme İdaresi',
+      startingPrice: 30000,
+      currentBid: 30000,
+      highestBidderId: null,
+      highestBidderName: null,
+      timeLeft: 30,
+      isPortLease: true,   // özel tip: kiralama ihalesi
+      leaseTurns: 5
+    };
+
+    room.gameState.activeAuction = portAuction;
+
+    const timer = setInterval(() => {
+      if (!room.gameState || !room.gameState.activeAuction || room.gameState.activeAuction.id !== portAuction.id) {
+        clearInterval(timer);
+        return;
+      }
+      portAuction.timeLeft -= 1;
+      io.to(room.code).emit('server:auctionTick', {
+        timeLeft: portAuction.timeLeft,
+        currentBid: portAuction.currentBid,
+        highestBidderId: portAuction.highestBidderId,
+        highestBidderName: portAuction.highestBidderName,
+        propertyName: portAuction.propertyName,
+        propertyId: portAuction.propertyId,
+        sellerId: portAuction.sellerId
+      });
+      if (portAuction.timeLeft <= 0) {
+        clearInterval(timer);
+        // İhale sonuçlandır: kazanan varsa 5 turluk kiralama hakkı
+        room.gameState.activeAuction = null;
+        if (portAuction.highestBidderId && room.gameState.playersState[portAuction.highestBidderId]) {
+          const winner = room.gameState.playersState[portAuction.highestBidderId];
+          winner.balance -= portAuction.currentBid;
+          // Kiralama kaydı — gerçek sahiplik DEĞİL
+          room.gameState.propertyOwnership[5] = {
+            ownerId: portAuction.highestBidderId,
+            houses: 0,
+            isMortgaged: false,
+            isLease: true,          // kiralama bayrağı
+            leaseExpiresTurn: (room.gameState.totalTurnsCompleted || 0) + 5
+          };
+          io.to(room.code).emit('server:portLeaseWon', {
+            winnerId: portAuction.highestBidderId,
+            winnerName: portAuction.highestBidderName,
+            bid: portAuction.currentBid,
+            leaseTurns: 5
+          });
+          io.to(room.code).emit('server:logMessage', {
+            message: `⚓ LİMAN KİRALAMA KAZANDI: ${portAuction.highestBidderName} Limanı ${portAuction.currentBid.toLocaleString('tr-TR')} ₺ ile 5 tur kiraladı!`,
+            type: 'success'
+          });
+        } else {
+          io.to(room.code).emit('server:portLeaseWon', { winnerId: null, winnerName: 'Teklif Gelmedi', bid: 0, leaseTurns: 0 });
+        }
+        io.to(room.code).emit('server:turnUpdated', {
+          currentTurnIndex: room.gameState.currentTurnIndex,
+          activePlayerId: room.players[room.gameState.currentTurnIndex]?.id,
+          isDouble
+        });
+        io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+      }
+    }, 1000);
+
+    Object.defineProperty(portAuction, 'timerId', { value: timer, writable: true, enumerable: false, configurable: true });
+
+    io.to(room.code).emit('server:auctionStarted', { auction: portAuction });
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    callback({ success: true });
+  });
+
+  socket.on('client:leaveRoom', () => {
+    handlePlayerExit(io, socket);
+  });
+
+  /**
+   * FAZ 6: Şans Kartı A/B Kararını İşleme (client:chanceCardDecision)
+   */
+  socket.on('client:chanceCardDecision', ({ cardId, decision }, callback = () => {}) => {
+    const result = chanceCardDecision(socket.id, { cardId, decision });
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const {
+      room,
+      playerId,
+      playerName,
+      newsFlash,
+      currentTurnIndex,
+      activePlayerId
+    } = result;
+
+    console.log(`[Şans Kararı]: ${room.code} - ${playerName} Kart #${cardId} için Seçenek [${decision}] seçti.`);
+
+    // 1. Son Dakika Haberi (Gazete Manşeti) Yayınla
+    io.to(room.code).emit('server:newsFlash', newsFlash);
+
+    if (result.selectedOption?.actionType === 'GO_TO_JAIL_NO_SALARY') {
+      io.to(room.code).emit('server:playerJailed', {
+        playerId,
+        playerName,
+        reason: 'Şans Kartı Kararı ile Doğrudan Tutuklama (#13)'
+      });
+    }
+
+    // 2. Ayrıca log ve bakiye/tahta güncellemelerini yayınla
+    io.to(room.code).emit('server:log', {
+      time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+      text: `${newsFlash.title}: ${newsFlash.message}`,
+      type: 'info',
+      id: Date.now().toString()
+    });
+
+    io.to(room.code).emit('server:turnUpdated', {
+      currentTurnIndex,
+      activePlayerId,
+      isDouble: false,
+      previousPlayerName: playerName
+    });
+
+    io.to(room.code).emit('server:gameStateUpdate', {
+      gameState: room.gameState
+    });
+
+    callback({ success: true, result });
+
+    if (result.selectedOption?.actionType === 'TRIGGER_PUBLIC_AUCTION') {
+      io.to(room.code).emit('server:auctionCountdown', {
+        seconds: 10,
+        title: 'Akıllı Sulama Sistemleri İhalesi',
+        description: 'Tüm yatırımcılara açık 20 saniyelik altyapı ihalesi. Kazanan oyuncu Hammadde Tesisinden 5 tur boyunca 2 KAT ÜRETİM / KİRA GETİRİSİ sağlayacak!'
+      });
+
+      setTimeout(() => {
+        startSpecialAuction(room.code, io);
+      }, 10000);
+    }
+  });
+
+  /**
+   * client:renameBusiness - Geri Dönüşler Faz 3: İşletmeye isim verme
+   */
+  socket.on('client:renameBusiness', ({ propertyId, customName }, callback = () => {}) => {
+    const result = renameBusiness(socket.id, Number(propertyId), customName);
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+    io.to(result.room.code).emit('server:gameStateUpdate', { gameState: result.room.gameState });
+    callback({ success: true });
+  });
+
+  /**
+   * client:sendSwapOffer - Geri Dönüşler Faz 3: Bilateral takas teklifi gönderme
+   */
+  socket.on('client:sendSwapOffer', ({ toId, offeredProperties, offeredCash, requestedProperties, requestedCash }, callback = () => {}) => {
+    const result = sendSwapOffer(socket.id, toId, offeredProperties, offeredCash, requestedProperties, requestedCash);
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+    io.to(result.room.code).emit('server:receiveSwapOffer', result.offer);
+    io.to(result.room.code).emit('server:gameStateUpdate', { gameState: result.room.gameState });
+    callback({ success: true, result });
+  });
+
+  /**
+   * client:respondSwapOffer - Geri Dönüşler Faz 3: Bilateral takas teklifini yanıtlama
+   */
+  socket.on('client:respondSwapOffer', ({ offerId, accepted }, callback = () => {}) => {
+    const result = respondSwapOffer(socket.id, offerId, accepted);
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+    io.to(result.room.code).emit('server:swapOfferResolved', { accepted: result.accepted, offer: result.offer });
+    io.to(result.room.code).emit('server:gameStateUpdate', { gameState: result.room.gameState });
+
+    // Log update
+    const logText = result.accepted
+      ? `🔄 Takas Anlaşması KABUL EDİLDİ: ${result.offer.fromName} & ${result.offer.toName} arasında varlık değişimi yapıldı.`
+      : `❌ Takas Anlaşması REDDEDİLDİ: ${result.offer.fromName} & ${result.offer.toName} takas teklifinde anlaşamadı.`;
+    io.to(result.room.code).emit('server:log', { 
+      time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }), 
+      text: logText, 
+      type: result.accepted ? 'success' : 'warning', 
+      id: Date.now().toString() 
+    });
+
+    callback({ success: true, result });
+  });
+
+  /**
+   * client:submitBorsaInvestment - Geri Dönüşler Faz 4: Borsaya Yatırım Yapma
+   */
+  socket.on('client:submitBorsaInvestment', ({ amount }, callback = () => {}) => {
+    const result = submitBorsaInvestment(socket.id, amount);
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+    io.to(result.room.code).emit('server:gameStateUpdate', { gameState: result.room.gameState });
+    io.to(result.room.code).emit('server:turnUpdated', {
+      currentTurnIndex: result.currentTurnIndex,
+      activePlayerId: result.activePlayerId,
+      isDouble: false
+    });
+    callback({ success: true, result });
+  });
+
+  socket.on('disconnect', (reason) => {
+    console.log(`[Socket Ayrıldı]: ${socket.id} - Sebep: ${reason}`);
+    handlePlayerExit(io, socket);
+  });
+}
+
+function handlePlayerExit(io, socket) {
+  const result = removePlayer(socket.id);
+
+  if (!result.success) return;
+
+  const { roomCode, roomClosed, room, removedPlayerId, newHostId } = result;
+  socket.leave(roomCode);
+
+  if (roomClosed) {
+    console.log(`[Oda Kapatıldı]: ${roomCode} - Son oyuncu ayrıldı.`);
+  } else if (room) {
+    console.log(`[Oyuncu Ayrıldı]: ${roomCode} - Ayrılan ID: ${removedPlayerId}${newHostId ? ` -> Yeni Host: ${newHostId}` : ''}`);
+    io.to(roomCode).emit('server:roomUpdate', {
+      roomCode: room.code,
+      players: room.players,
+      isStarted: room.isStarted,
+      gameState: room.gameState,
+      leftPlayerId: removedPlayerId,
+      newHostId: newHostId
+    });
+  }
+}

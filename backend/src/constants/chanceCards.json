@@ -1,0 +1,170 @@
+[
+  {
+    "id": 1,
+    "title": "Girişim Yatırımı",
+    "description": "Genç bir girişimci fikrine melek yatırımcı arıyor.",
+    "optionA": { "label": "Yatırım Yap (-30.000 ₺)", "description": "30.000 ₺ yatırım yaparak projeye ortak ol. Başarılı olursa 3 kat getiri sağlar.", "cost": 30000, "actionType": "startup_invest" },
+    "optionB": { "label": "Pas Geç", "description": "Teklifi reddet ve nakitini koru.", "cost": 0, "actionType": "none" }
+  },
+  {
+    "id": 2,
+    "title": "E-Spor Takımı Yatırımı",
+    "description": "Gelecek vadeden bir E-Spor takımına sponsor olma fırsatı.",
+    "optionA": { "label": "Sponsor Ol (-25.000 ₺)", "description": "Takımın forma sponsoru ol. Şampiyonluk durumunda yüksek getiri kazandırır.", "cost": 25000, "actionType": "esports_invest" },
+    "optionB": { "label": "İlgilenmiyorum", "description": "Sponsorluk teklifini reddet.", "cost": 0, "actionType": "none" }
+  },
+  {
+    "id": 3,
+    "title": "Devlet İhalesi",
+    "description": "Büyük bir altyapı ve devlet ihalesine davet edildin.",
+    "optionA": { "label": "İhaleye Gir (-40.000 ₺ Giriş Bedeli)", "description": "İhale giriş bedelini öde. Kazanırsan 3 tur boyunca düzenli nakit akışı sağlar.", "cost": 40000, "actionType": "state_tender" },
+    "optionB": { "label": "Girme", "description": "İhaleye katılma, nakitini sakla.", "cost": 0, "actionType": "none" }
+  },
+  {
+    "id": 4,
+    "title": "Dev Karalama Operasyonu!",
+    "description": "Hakkında büyük bir asılsız dosya servis edildi. Hisselerin çakılıyor ve itibarın tehlikede!",
+    "isScandal": true,
+    "optionA": { "label": "Medyayı Satın Al / Rüşvet Ver (-50.000 ₺)", "description": "Yüksek bir rüşvet ödeyerek haberi anında sildirt ve itibarını koru.", "cost": 50000, "actionType": "bribe_media" },
+    "optionB": { "label": "Dik Dur (Ödeme Yapma)", "description": "Para ödemeyi reddet. Ancak 3 tur boyunca tüm mülk ve işletme gelirlerin %50 düşer.", "cost": 0, "actionType": "defy_slander" }
+  },
+  {
+    "id": 5,
+    "title": "Katar Ortaklığı Teklifi",
+    "description": "Katarlı dev bir fon, işletmenize (Ticarethane / Fabrika / Liman / AVM / Hammadde) %40 ortak olmak istiyor.",
+    "requiresBusinessOwner": true,
+    "optionA": { "label": "Ortaklık Kur (+150.000 ₺)", "description": "Anında 150.000 ₺ sıcak para kazan. Ancak oyun sonuna kadar işletme gelirlerinin %40'ı fona kesilir.", "cost": -150000, "actionType": "qatar_partnership" },
+    "optionB": { "label": "Reddet", "description": "Ortaklık teklifini reddet, işletmende tam bağımsız kal.", "cost": 0, "actionType": "none" }
+  },
+  {
+    "id": 6,
+    "title": "Borsa Macerası",
+    "description": "Borsa İstanbul'da aşırı hareketlilik var. Hızlı işlemle büyük getiri elde etme şansı.",
+    "optionA": { "label": "Hisse Al (Nakitin %50'si)", "description": "Mevcut nakit paranın yarısını borsaya yatır ve ralli fırsatını değerlendir.", "cost": 0, "actionType": "stock_adventure" },
+    "optionB": { "label": "Uzak Dur", "description": "Piyasadaki dalgalanmaya bulaşma, nakitini koru.", "cost": 0, "actionType": "none" }
+  },
+  {
+    "id": 7,
+    "title": "Vergi Muafiyeti",
+    "description": "Ankara'daki üst düzey bağlantıların sayesinde vergi muafiyeti tanındı!",
+    "isNoOption": true,
+    "optionA": { "label": "Tamam • Doğrudan Uygula", "description": "2 tur boyunca hiçbir hazine vergisi ve gümrük komisyonu ödemeyeceksin.", "cost": 0, "actionType": "tax_immunity" },
+    "optionB": null
+  },
+  {
+    "id": 8,
+    "title": "Devlet Konut Desteği",
+    "description": "Devlet destekli gayrimenkul kampanyası ile emlak piyasası canlandı!",
+    "isNoOption": true,
+    "optionA": { "label": "Tamam • Doğrudan Uygula", "description": "2 evli mülklerinin kirası 2 tur, 3 evli mülklerinin kirası 1 tur boyunca 2 katına çıkar.", "cost": 0, "actionType": "housing_support" },
+    "optionB": null
+  },
+  {
+    "id": 9,
+    "title": "İnşaat Teşviki",
+    "description": "İnşaat malzemalarında KDV sıfırlandı ve teşvik paketleri açıldı!",
+    "isNoOption": true,
+    "optionA": { "label": "Tamam • Doğrudan Uygula", "description": "1 tur boyunca tüm ev ve otel inşa maliyetlerin %45 indirimli.", "cost": 0, "actionType": "build_incentive" },
+    "optionB": null
+  },
+  {
+    "id": 10,
+    "title": "Liman İhalesine Fesat / Operasyon",
+    "description": "Limanı kiralayan rakip oyuncuya medya üzerinden operasyon çekip sözleşmesini feshettirebilirsin.",
+    "optionA": { "label": "Haberi Yaptır (-140.000 ₺)", "description": "Liman kiralama bedelinin %70'ini peşin öde. Liman sözleşmesi iptal edilsin.", "cost": 140000, "actionType": "sabotage_port" },
+    "optionB": { "label": "Bulaşma", "description": "Bu riskli operasyona girmekten kaçın.", "cost": 0, "actionType": "none" }
+  },
+  {
+    "id": 11,
+    "title": "Fuhuş Skandalı!",
+    "description": "İş insanı ${playerName} evinde hayat kadınlarıyla beraber basıldı!",
+    "isScandal": true,
+    "optionA": { "label": "Haberi Sustur (-60.000 ₺)", "description": "Medya şirketine veya sisteme rüşvet vererek dosyayı anında kapat.", "cost": 60000, "actionType": "bribe_media" },
+    "optionB": { "label": "Bırak Alem Yiğit Görsün", "description": "Para ödemeyi reddet. Ancak itibar kaybından dolayı 2 tur boyunca tüm kazançların %70 düşer.", "cost": 0, "actionType": "scandal_penalty" }
+  },
+  {
+    "id": 12,
+    "type": "CRISIS",
+    "title": "Otelde Mafya Hesaplaşması!",
+    "description": "Sahip olduğun en lüks otelin kral dairesinde mafya hesaplaşması yaşandı. Cesetler var ve polis yolda.",
+    "optionA": { "label": "Rüşvet Ver (-80.000 ₺)", "text": "Rüşvet Ver (Emniyet ve medyaya 80.000 TL öde, olay örtbas edilsin)", "description": "Emniyet ve medyaya 80.000 TL öde, olay örtbas edilsin.", "cost": 80000, "actionType": "PAY_POLICE_BRIBE", "action": "PAY_POLICE_BRIBE" },
+    "optionB": { "label": "Haberlere Çık (3 Tur Kira Yok)", "text": "Haberlere Çık (Mühürlenen otelin 3 tur boyunca sana kira getirmez)", "description": "Mühürlenen otelin 3 tur boyunca sana kira getirmez.", "cost": 0, "actionType": "HALT_HOTEL_INCOME", "action": "HALT_HOTEL_INCOME" }
+  },
+  {
+    "id": 13,
+    "type": "CRISIS",
+    "title": "Ucuza Kaçan Müteahhit!",
+    "description": "Kentsel dönüşüm projesinde deniz kumu kullandığın tespit edildi. Belediye inşaatı mühürlemeye geliyor.",
+    "optionA": { "label": "Para Yedir (-40.000 ₺)", "text": "Para Yedir (Denetmenlere 40.000 TL öde, inşaat durmasın)", "description": "Denetmenlere 40.000 TL öde, inşaat durmasın.", "cost": 40000, "actionType": "PAY_INSPECTOR_BRIBE", "action": "PAY_INSPECTOR_BRIBE" },
+    "optionB": { "label": "Yıkımı Kabul Et", "text": "Yıkımı Kabul Et (En değerli mülkünün üzerindeki tüm evler/oteller anında yıkılır)", "description": "En değerli mülkünün üzerindeki tüm evler/oteller anında yıkılır.", "cost": 0, "actionType": "DESTROY_TOP_BUILDINGS", "action": "DESTROY_TOP_BUILDINGS" }
+  },
+  {
+    "id": 14,
+    "type": "CRISIS",
+    "title": "Siber Saldırı!",
+    "description": "Holdingin sistemlerine siber saldırı var ve kilitlendi.",
+    "optionA": { "label": "Fidye Öde (-50.000 ₺)", "text": "Fidye Öde (Korsanlara 50.000 TL öde, sistem anında açılsın)", "description": "Korsanlara 50.000 TL öde, sistem anında açılsın.", "cost": 50000, "actionType": "PAY_HACKER_RANSOM", "action": "PAY_HACKER_RANSOM" },
+    "optionB": { "label": "Sistemleri Sıfırla", "text": "Sistemleri Sıfırla (2 tur boyunca tüm işletmelerin kapalı kalır)", "description": "2 tur boyunca tüm işletmelerin kapalı kalır.", "cost": 0, "actionType": "RESET_SYSTEMS_HALT", "action": "RESET_SYSTEMS_HALT" }
+  },
+  {
+    "id": 15,
+    "type": "CRISIS",
+    "title": "İçeriden Bilgi Ticareti (Insider Trading)",
+    "description": "Borsada gizli bilgileri sızdırarak haksız kazanç sağladığın belgelendi.",
+    "isNoOption": true,
+    "optionA": { "label": "Kaderine Razı Ol • Hapse Gir", "text": "Kaderine Razı Ol (Doğrudan Hapse girersin, bu tur maaş alamazsın)", "description": "Doğrudan Hapse girersin, bu tur maaş alamazsın.", "cost": 0, "actionType": "GO_TO_JAIL_NO_SALARY", "action": "GO_TO_JAIL_NO_SALARY" },
+    "optionB": null
+  },
+  {
+    "id": 16,
+    "type": "CRISIS",
+    "title": "Sendika Lideri Şüpheli Şekilde Öldü",
+    "description": "Fabrikanda grev başlatan lider kaza sonucu öldü. Oklar seni gösteriyor, üretim durdu.",
+    "requiresBusinessOwner": true,
+    "isNoOption": true,
+    "optionA": { "label": "Tazminat Öde (-50.000 ₺ & 2 Tur Kapanma)", "text": "Tazminat Öde (Fabrika ve Hammadde tesisin 2 tur kapanır, devlete 50.000 TL ödersin)", "description": "Fabrika ve Hammadde tesisin 2 tur kapanır, devlete 50.000 TL ödersin.", "cost": 50000, "actionType": "PAY_UNION_DEATH_FINE", "action": "PAY_UNION_DEATH_FINE" },
+    "optionB": null
+  },
+  {
+    "id": 17,
+    "type": "CRISIS",
+    "title": "Çöken Tedarik Zinciri",
+    "description": "Gümrükten geçirdiğin mallar kaçak çıktı. Mallara ve tırlara el konuldu.",
+    "optionA": { "label": "Cezayı Öde (-100.000 ₺)", "text": "Cezayı Öde (Kasandan anında 100.000 TL silinsin dosyayı kapat)", "description": "Kasandan anında 100.000 TL silinsin dosyayı kapat.", "cost": 100000, "actionType": "PAY_CUSTOMS_FINE", "action": "PAY_CUSTOMS_FINE" },
+    "optionB": { "label": "Avukat Tut (Mahkemeye Taşı)", "text": "Avukat Tut (Dava sonucu mahkemede belli olacak)", "description": "Güçlü avukatlarla davaya gir, mahkemenin kararına göre hareket et.", "cost": 0, "actionType": "LAWSUIT_CUSTOMS", "action": "LAWSUIT_CUSTOMS" }
+  },
+  {
+    "id": 18,
+    "type": "OPPORTUNITY",
+    "title": "Akıllı Sulama Sistemleri İhalesi",
+    "description": "Devlet, devasa tarım arazileri için modern sulama sistemleri altyapı ihalesi açtı.",
+    "optionA": { "label": "İhaleye Fesat Karıştır (-30.000 ₺)", "text": "İhaleye Fesat Karıştır (Komisyona 30.000 TL öde, Hammadde tesisinden 5 tur boyunca 2 kat üretim/gelir sağla)", "description": "Komisyona 30.000 TL öde, Hammadde tesisinden 5 tur boyunca 2 kat üretim/gelir sağla.", "cost": 30000, "actionType": "RIG_IRRIGATION_TENDER", "action": "RIG_IRRIGATION_TENDER" },
+    "optionB": { "label": "Risk Alma • Açık İhale Başlat", "text": "Risk Alma (Tüm oyuncular için 10 saniye sonra başlayacak, 20 saniye sürecek açık ihale başlasın)", "description": "Tüm oyuncuların katılabileceği 20 saniyelik açık altyapı ihalesi başlasın.", "cost": 0, "actionType": "TRIGGER_PUBLIC_AUCTION", "action": "TRIGGER_PUBLIC_AUCTION" }
+  },
+  {
+    "id": 19,
+    "type": "OPPORTUNITY",
+    "title": "Ünlü Yönetmenin Dizi Çekimi",
+    "description": "Reyting rekorları kıran bir mafya dizisi, mülklerinden birini set olarak kiralamak istiyor.",
+    "isNoOption": true,
+    "optionA": { "label": "Kabul Et (+70.000 ₺ Nakit)", "text": "Kabul Et (Kasana anında 70.000 TL girer ancak set kurulan mülkten 1 tur kira alamazsın)", "description": "Kasana anında 70.000 TL girer ancak set kurulan mülkten 1 tur kira alamazsın.", "cost": -70000, "actionType": "RENT_TO_MOVIE_SET", "action": "RENT_TO_MOVIE_SET" },
+    "optionB": null
+  },
+  {
+    "id": 20,
+    "type": "OPPORTUNITY",
+    "title": "Yabancı Konsorsiyum Satın Alması",
+    "description": "Avrupalı bir yatırım fonu, elindeki en değersiz arsaya talip oldu.",
+    "isNoOption": true,
+    "optionA": { "label": "Devret (+150.000 ₺ Nakit)", "text": "Devret (Sahip olduğun en ucuz mülkü devlete iade edersin, karşılığında kasana 150.000 TL temiz nakit girer)", "description": "Sahip olduğun en ucuz mülkü devlete iade edersin, karşılığında kasana 150.000 TL temiz nakit girer.", "cost": -150000, "actionType": "SELL_CHEAPEST_PROPERTY_HIGH", "action": "SELL_CHEAPEST_PROPERTY_HIGH" },
+    "optionB": null
+  },
+  {
+    "id": 21,
+    "type": "OPPORTUNITY",
+    "title": "Gümrükte Karaborsa",
+    "description": "Sınır kapılarında denetimler gevşedi. Ülkeye kaçak elektronik eşya sokmak için bir fırsat.",
+    "optionA": { "label": "Kaçakçılık Yap (Büyük Fırsat/Risk)", "text": "Kaçakçılık Yap (Riskli operasyonla büyük kazanç hedefle)", "description": "Operasyonu başlat, sınır kapısındaki duruma göre sonuç alınsın.", "cost": 0, "actionType": "SMUGGLE_GOODS_60_40", "action": "SMUGGLE_GOODS_60_40" },
+    "optionB": { "label": "Yasal Ticaret (Masrafsız)", "text": "Yasal Ticaret (Riske girme)", "description": "Riske girme, rutin ticarete devam et.", "cost": 0, "actionType": "DO_NOTHING", "action": "DO_NOTHING" }
+  }
+]

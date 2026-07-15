@@ -1,0 +1,16 @@
+{
+  "name": "holding-simulation-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Holding Real-time Economy Simulation - Root Workspaces",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev:backend": "npm --workspace=backend run dev",
+    "dev:frontend": "npm --workspace=frontend run dev",
+    "build:frontend": "npm --workspace=frontend run build"
+  }
+}

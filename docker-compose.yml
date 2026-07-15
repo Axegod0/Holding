@@ -1,0 +1,38 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: holding-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    networks:
+      - holding-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const h=require('http');h.get('http://localhost:3000/api/status',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: holding-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - holding-net
+    restart: unless-stopped
+
+networks:
+  holding-net:
+    driver: bridge
