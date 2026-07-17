@@ -29,6 +29,8 @@ export const useGameStore = create((set, get) => ({
   activeBusinessNaming: null, // FAZ 10: İşletme isimlendirme modalı
   activeAuction: null, // FAZ 5: Canlı devam eden ihale
   auctionCountdown: null, // Özel ihale geri sayım
+  isPropertyModalMinimized: false, // Yeni: YouTube PIP stili küçültme durumları
+  isAuctionModalMinimized: false,
   activeBankModal: false,
   activeJailModal: false,
   activeChanceCard: null,
@@ -322,7 +324,7 @@ export const useGameStore = create((set, get) => ({
 
     socket.on('server:offerProperty', ({ playerId, playerName, property }) => {
       if (playerId === socket.id) {
-        set({ offeredProperty: property });
+        set({ offeredProperty: property, isPropertyModalMinimized: false });
         get().showToast(`${property.name} mülküne geldiniz! Satın almak istiyor musunuz?`, 'info', 5000);
       }
       get().addLog(`${playerName}, sahipsiz ${property.name} (#${property.id}) karesine ulaştı. Satın alma kararı bekleniyor...`, 'info');
@@ -331,7 +333,7 @@ export const useGameStore = create((set, get) => ({
     socket.on('server:propertyBought', ({ playerId, playerName, propertyId, propertyName, price, useLoan }) => {
       const myId = get().myId;
       if (playerId === myId) {
-        set({ offeredProperty: null });
+        set({ offeredProperty: null, isPropertyModalMinimized: false });
         const loanMsg = useLoan ? ' (KREDİLİ / %30 Peşinat - İpotekli)' : '';
         get().showToast(`${propertyName} tapusunu ${price.toLocaleString('tr-TR')} ₺ bedelle${loanMsg} satın aldınız!`, 'success');
         if (propertyId === 5 || propertyId === 15 || propertyId === 24 || propertyId === 29 || propertyId === 35) {
@@ -343,7 +345,7 @@ export const useGameStore = create((set, get) => ({
 
     socket.on('server:propertyDeclined', ({ playerId, playerName, propertyName }) => {
       if (playerId === socket.id) {
-        set({ offeredProperty: null });
+        set({ offeredProperty: null, isPropertyModalMinimized: false });
         get().showToast(`${propertyName} satın almasını reddettiniz.`, 'info');
       }
       get().addLog(`${playerName}, ${propertyName} satın almasını reddetti.`, 'info');
@@ -489,7 +491,7 @@ export const useGameStore = create((set, get) => ({
     });
 
     socket.on('server:startSpecialAuction', ({ auction }) => {
-      set({ auctionCountdown: null, activeAuction: auction });
+      set({ auctionCountdown: null, activeAuction: auction, isAuctionModalMinimized: false });
       get().addLog(`🔨 CANLI İHALE BAŞLADI: ${auction.propertyName} (${auction.startingPrice?.toLocaleString('tr-TR')} ₺ başlangıç bedeliyle 20s sayım başladı!)`, 'warning');
       get().showToast(`İhale Başladı: ${auction.propertyName}! Teklif verebilirsiniz.`, 'info', 4000);
     });
@@ -500,7 +502,7 @@ export const useGameStore = create((set, get) => ({
     });
 
     socket.on('server:auctionStarted', ({ auction }) => {
-      set({ activeAuction: auction, auctionCountdown: null });
+      set({ activeAuction: auction, auctionCountdown: null, isAuctionModalMinimized: false });
       get().addLog(`🔨 CANLI İHALE BAŞLADI: #${auction.propertyId} - ${auction.propertyName} (${auction.startingPrice?.toLocaleString('tr-TR')} ₺ başlangıç bedeliyle 30s sayım tetiklendi!)`, 'warning');
       get().showToast(`İhale Başladı: ${auction.propertyName}! Teklif verebilirsiniz.`, 'info', 4000);
     });
@@ -512,7 +514,7 @@ export const useGameStore = create((set, get) => ({
     });
 
     socket.on('server:auctionConcluded', ({ propertyName, winnerName, finalPrice, winnerId }) => {
-      set({ activeAuction: null, auctionCountdown: null });
+      set({ activeAuction: null, auctionCountdown: null, isAuctionModalMinimized: false });
       get().addLog(`🏆 İhale Tamamlandı: ${propertyName} - Kazanan: ${winnerName || 'Devlet'} (${finalPrice?.toLocaleString('tr-TR')} ₺)`, 'success');
       if (winnerId === socket.id) {
         get().showToast(`Tebrikler! ${propertyName} ihalesini kazandınız!`, 'success', 4500);
@@ -569,7 +571,7 @@ export const useGameStore = create((set, get) => ({
 
     // Liman kiralama ihalesi kazanıldı
     socket.on('server:portLeaseWon', ({ winnerId, winnerName, bid, leaseTurns }) => {
-      set({ activePortLeaseAuction: null });
+      set({ activePortLeaseAuction: null, activeAuction: null, isAuctionModalMinimized: false });
       if (winnerId) {
         get().addLog(`⚓ LİMAN KİRALAMA KAZANDI: ${winnerName} Limanı ${bid.toLocaleString('tr-TR')} ₺ ile ${leaseTurns} tur kiraladı!`, 'success');
         if (winnerId === socket.id) {
@@ -900,6 +902,8 @@ export const useGameStore = create((set, get) => ({
   },
 
   setActiveBankModal: (val) => set({ activeBankModal: val }),
+  setPropertyModalMinimized: (val) => set({ isPropertyModalMinimized: val }),
+  setAuctionModalMinimized: (val) => set({ isAuctionModalMinimized: val }),
   setActiveJailModal: (val) => set({ activeJailModal: val }),
   setActiveJailAlert: (val) => set({ activeJailAlert: val }),
   activePropertyManagement: null,

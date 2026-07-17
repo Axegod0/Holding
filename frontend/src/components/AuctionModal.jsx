@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Hammer, Clock, DollarSign, User, AlertTriangle, TrendingUp, ShieldAlert, Sparkles } from 'lucide-react';
+import { Hammer, Clock, DollarSign, User, AlertTriangle, TrendingUp, ShieldAlert, Sparkles, Minimize2, Maximize2 } from 'lucide-react';
 import useGameStore from '../store/gameStore.js';
 import socket from '../services/socket.js';
 
@@ -9,6 +9,8 @@ export default function AuctionModal() {
   const gameState = useGameStore(state => state.gameState);
   const finishAuctionEarly = useGameStore(state => state.finishAuctionEarly);
   const myId = useGameStore(state => state.myId) || socket?.id;
+  const isAuctionModalMinimized = useGameStore(state => state.isAuctionModalMinimized);
+  const setAuctionModalMinimized = useGameStore(state => state.setAuctionModalMinimized);
   const [customBid, setCustomBid] = useState('');
 
   if (!activeAuction) return null;
@@ -18,6 +20,46 @@ export default function AuctionModal() {
   const isHighestBidder = activeAuction.highestBidderId === myId || activeAuction.highestBidderId === socket?.id;
   const currentBid = activeAuction.currentBid || 0;
   const timeLeft = activeAuction.timeLeft || 0;
+
+  if (isAuctionModalMinimized) {
+    return (
+      <div 
+        onClick={() => setAuctionModalMinimized(false)}
+        className="fixed bottom-4 right-4 z-40 bg-gray-900 border border-amber-500 rounded-2xl p-4 shadow-[0_10px_30px_rgba(245,158,11,0.25)] cursor-pointer hover:border-amber-400 hover:scale-105 transition-all w-72 flex flex-col gap-2 glass-panel-glow text-white select-none animate-slide-in"
+      >
+        <div className="flex items-center justify-between border-b border-gray-800 pb-1.5">
+          <div className="flex items-center gap-2">
+            <Hammer className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
+            <span className="text-[10px] font-mono font-bold tracking-wider text-amber-400">AKTİF İHALE (PİP)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`px-2 py-0.5 rounded font-mono text-[10px] ${
+              timeLeft <= 10 ? 'bg-red-950 text-red-400 animate-pulse' : 'bg-gray-800 text-amber-300'
+            }`}>
+              {timeLeft} sn
+            </div>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setAuctionModalMinimized(false);
+              }}
+              className="text-gray-400 hover:text-white"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+        <div className="flex justify-between items-center">
+          <div className="font-extrabold text-sm truncate max-w-[160px]">{activeAuction.propertyName}</div>
+          <div className="text-white font-bold text-xs font-mono">{currentBid.toLocaleString('tr-TR')} ₺</div>
+        </div>
+        <div className="text-[9px] text-gray-400 font-mono flex items-center justify-between mt-1">
+          <span>Lider: {activeAuction.highestBidderName || 'Yok'}</span>
+          <span className="text-amber-400 font-semibold underline">Büyüt & Teklif Ver</span>
+        </div>
+      </div>
+    );
+  }
 
   const handleQuickBid = (increment) => {
     const nextBid = currentBid + increment;
@@ -40,6 +82,15 @@ export default function AuctionModal() {
         
         {/* Üst Dekorasyon Bantı */}
         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 animate-pulse" />
+
+        {/* Küçültme (Minimize) Butonu */}
+        <button
+          onClick={() => setAuctionModalMinimized(true)}
+          className="absolute top-4 right-4 p-2 rounded-xl bg-gray-950/80 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-white transition-all cursor-pointer z-10"
+          title="Müzayedeyi Küçült (Banka/İpotek işlemleri için)"
+        >
+          <Minimize2 className="w-4 h-4" />
+        </button>
 
         {/* Başlık ve Kalan Süre */}
         <div className="flex items-center justify-between border-b border-gray-800/80 pb-4">

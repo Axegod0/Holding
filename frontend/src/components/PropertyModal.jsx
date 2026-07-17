@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, DollarSign, ShieldCheck, AlertCircle, X, Check, ArrowRight } from 'lucide-react';
+import { Building2, DollarSign, ShieldCheck, AlertCircle, X, Check, ArrowRight, Minimize2, Maximize2 } from 'lucide-react';
 import useGameStore from '../store/gameStore.js';
 import socket from '../services/socket.js';
 
@@ -13,8 +13,40 @@ export default function PropertyModal() {
   const isTokenMoving = useGameStore(state => state.isTokenMoving);
   const theme = useGameStore(state => state.theme);
   const myId = useGameStore(state => state.myId) || socket?.id;
+  const isPropertyModalMinimized = useGameStore(state => state.isPropertyModalMinimized);
+  const setPropertyModalMinimized = useGameStore(state => state.setPropertyModalMinimized);
 
   if (!offeredProperty || activeDiceAnimation || isTokenMoving) return null;
+
+  if (isPropertyModalMinimized) {
+    return (
+      <div 
+        onClick={() => setPropertyModalMinimized(false)}
+        className="fixed bottom-4 right-4 z-40 bg-gray-900 border border-amber-500/50 rounded-2xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)] cursor-pointer hover:border-amber-400 hover:scale-105 transition-all w-72 flex flex-col gap-2 glass-panel-glow text-white select-none animate-slide-in"
+      >
+        <div className="flex items-center justify-between border-b border-gray-800 pb-1.5">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full animate-pulse" style={{ backgroundColor: offeredProperty.color || '#3B82F6' }} />
+            <span className="text-[10px] font-mono font-bold tracking-wider text-amber-400">MÜLK SATIN ALIM (PİP)</span>
+          </div>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setPropertyModalMinimized(false);
+            }}
+            className="text-gray-400 hover:text-white"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div className="flex justify-between items-center">
+          <div className="font-extrabold text-sm truncate max-w-[160px]">{offeredProperty.name}</div>
+          <div className="text-emerald-400 font-bold text-xs font-mono">{offeredProperty.price?.toLocaleString('tr-TR')} ₺</div>
+        </div>
+        <div className="text-[9px] text-gray-400 font-mono italic">Kredi çekmek için tıklayıp büyütün.</div>
+      </div>
+    );
+  }
 
   const isLight = theme === 'light';
   const myState = gameState?.playersState[myId] || { balance: 0 };
@@ -43,6 +75,19 @@ export default function PropertyModal() {
         isLight ? 'bg-white border-slate-300 text-slate-900 shadow-xl' : 'bg-gray-900 border-gray-800 text-white'
       }`}>
         
+        {/* Küçültme (Minimize) Butonu */}
+        <button
+          onClick={() => setPropertyModalMinimized(true)}
+          className={`absolute top-4 right-4 p-2 rounded-xl border transition-all cursor-pointer z-10 ${
+            isLight 
+              ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-500 hover:text-slate-800' 
+              : 'bg-gray-950/80 hover:bg-gray-800 border-gray-800 text-gray-400 hover:text-white'
+          }`}
+          title="Paneli Küçült (Banka/İpotek işlemleri için)"
+        >
+          <Minimize2 className="w-4 h-4" />
+        </button>
+
         {/* Üst Renk Vurgu Şeridi */}
         <div 
           className="h-3.5 w-full shrink-0" 
