@@ -9,6 +9,8 @@ services:
     environment:
       - PORT=3000
       - NODE_ENV=production
+    volumes:
+      - ./backend/logs:/app/logs
     networks:
       - holding-net
     restart: unless-stopped

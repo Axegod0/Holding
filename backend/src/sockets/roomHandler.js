@@ -27,6 +27,13 @@ import {
   submitBorsaInvestment,
   getRoomBySocketId
 } from '../state/roomStore.js';
+import { logGame, clearLog } from '../utils/logger.js';
+
+// Shadow console locally so all console.log calls in this module write to game.log and standard output
+const console = {
+  ...globalThis.console,
+  log: logGame
+};
 
 /**
  * Socket.io Oda, Lobi ve Çekirdek Oyun Motoru (Faz 2 & Faz 3) Olay Dinleyicileri
@@ -35,6 +42,9 @@ export function registerRoomHandlers(io, socket) {
   console.log(`[Socket Bağlandı]: ${socket.id}`);
 
   socket.on('client:createRoom', ({ name, colorId }, callback = () => {}) => {
+    // Clear old game logs when a new room/game is created
+    clearLog();
+
     const result = createRoom(socket.id, name, colorId);
 
     if (!result.success) {
