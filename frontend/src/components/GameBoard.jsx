@@ -139,7 +139,7 @@ export default function GameBoard() {
 
   return (
     <div className={`w-screen h-screen overflow-auto lg:overflow-hidden p-1.5 sm:p-2 transition-colors duration-300 flex items-start justify-start lg:items-center lg:justify-center ${
-      isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#0B132B] text-slate-100'
+      isLight ? 'bg-neutral-100 text-neutral-900' : 'bg-neutral-950 text-neutral-100'
     }`}>
       
       {/* Modallar ve Tam Ekran Aksiyon Ekranları */}
@@ -257,7 +257,7 @@ export default function GameBoard() {
               {playersOnSquare.length > 0 && (
                 <div className={`mt-auto pt-1 border-t flex items-center justify-center ${
                   playersOnSquare.length > 1 ? 'gap-1 -space-x-1.5 hover:space-x-1 transition-all duration-300' : 'gap-1'
-                } ${isLight ? 'border-slate-300' : 'border-[#3A506B]/60'}`}>
+                } ${isLight ? 'border-neutral-200' : 'border-neutral-800/60'}`}>
                   {playersOnSquare.map((p, pIdx) => {
                     const initials = p.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
                     const isMoving = displayPositions[p.id] !== undefined && displayPositions[p.id] !== (gameState?.playersState[p.id]?.position || 0);
@@ -298,7 +298,7 @@ export default function GameBoard() {
           }}
         >
           {/* 1. ÜST BÖLÜM: MİNİ HEADER + YATIRIMCI DURUMLARI (Tahta İçi) */}
-          <div className={`pb-2.5 mb-2 border-b flex flex-col gap-2 ${isLight ? 'border-slate-200' : 'border-[#3A506B]'}`}>
+          <div className={`pb-2.5 mb-2 border-b flex flex-col gap-2 ${isLight ? 'border-neutral-200' : 'border-neutral-800'}`}>
             
             {/* Üst Bar (Oda Kodu + Gece/Gündüz + Ayrıl - Tahta İçine Taşındı) */}
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -363,8 +363,8 @@ export default function GameBoard() {
                     key={p.id}
                     className={`p-2 sm:p-2.5 rounded-xl border transition-all ${
                       isCurrentTurn
-                        ? (isLight ? 'bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-100 border-emerald-500 shadow-md text-slate-900' : 'bg-gradient-to-r from-[#243153] via-[#10B981]/20 to-[#243153] border-emerald-400 shadow-md text-white')
-                        : (isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-[#243153]/70 border-[#3A506B] text-slate-300')
+                        ? (isLight ? 'bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-100 border-emerald-500 shadow-md text-slate-900' : 'bg-gradient-to-r from-neutral-900 via-emerald-500/20 to-neutral-900 border-emerald-400 shadow-md text-white')
+                        : (isLight ? 'bg-neutral-50 border-neutral-200 text-neutral-800' : 'bg-neutral-900 border-neutral-800 text-neutral-300')
                     }`}
                   >
                     <div className="flex items-center justify-between gap-1 mb-0.5">
@@ -390,7 +390,7 @@ export default function GameBoard() {
                     </div>
 
                     {/* Ekonomik Sis ve Tapu Değeri */}
-                    <div className={`flex items-center justify-between text-[11px] font-mono mt-1 pt-0.5 border-t ${isLight ? 'border-slate-300' : 'border-[#3A506B]/60'}`}>
+                    <div className={`flex items-center justify-between text-[11px] font-mono mt-1 pt-0.5 border-t ${isLight ? 'border-neutral-200' : 'border-neutral-800/60'}`}>
                       <span className={`${isLight ? 'text-emerald-800' : 'text-emerald-400'} font-bold flex items-center`} title="Güncel Nakit Bakiye">
                         <DollarSign className="w-3 h-3 -mr-0.5" />
                         {isMe ? `${pState.balance?.toLocaleString('tr-TR')} ₺` : '???,??? ₺'}
@@ -414,7 +414,7 @@ export default function GameBoard() {
           <div className="flex flex-col flex-1 justify-between min-h-0">
             
             {/* Sekme Seçici (Tab Switcher) */}
-            <div className={`flex flex-col sm:flex-row items-center justify-between gap-2 pb-2 border-b ${isLight ? 'border-slate-200' : 'border-[#3A506B]/60'}`}>
+            <div className={`flex flex-col sm:flex-row items-center justify-between gap-2 pb-2 border-b ${isLight ? 'border-neutral-200' : 'border-neutral-800/60'}`}>
               <div className="flex items-center gap-2">
                 <Dices className="w-4 h-4 text-emerald-400" />
                 <div>
@@ -480,7 +480,7 @@ export default function GameBoard() {
                   
                   {/* Sıra Sahibi Paneli */}
                   <div className={`w-full rounded-2xl p-4 sm:p-5 border mb-3 sm:mb-4 shadow-inner relative overflow-hidden ${
-                    isLight ? 'bg-slate-50 border-slate-300' : 'bg-[#243153]/60 border-[#3A506B]'
+                    isLight ? 'bg-neutral-50 border-neutral-200' : 'bg-neutral-900/60 border-neutral-800'
                   }`}>
                     <div className="flex items-center justify-center gap-2.5 mb-2">
                       <span 
@@ -510,7 +510,7 @@ export default function GameBoard() {
                     {/* Son Zar Sonucu Display */}
                     {lastDiceRoll && lastDiceRoll.dice && (
                       <div className={`mt-2.5 pt-2.5 border-t flex items-center justify-center gap-3 text-[11px] font-mono ${
-                        isLight ? 'border-slate-200 text-slate-700' : 'border-[#3A506B] text-slate-300'
+                        isLight ? 'border-neutral-200 text-neutral-700' : 'border-neutral-800 text-neutral-300'
                       }`}>
                         <span>Son Atılan Zar:</span>
                         <div className="flex items-center gap-1.5">
@@ -569,7 +569,7 @@ export default function GameBoard() {
 
             {/* 3. ALT BÖLÜM: KASA BİLGİSİ VE MERKEZ BANKASI */}
             <div className={`pt-2 border-t flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono ${
-              isLight ? 'border-slate-300 text-slate-700 font-bold' : 'border-[#3A506B] text-slate-400'
+              isLight ? 'border-neutral-200 text-neutral-700 font-bold' : 'border-neutral-800 text-neutral-400'
             }`}>
               <div className="flex items-center gap-3">
                 <span className={`flex items-center gap-1 ${isLight ? 'text-emerald-800' : 'text-emerald-400'} font-extrabold`}>
@@ -586,7 +586,7 @@ export default function GameBoard() {
                   className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 text-[11px] ${
                     isLight 
                       ? 'bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 shadow-sm' 
-                      : 'bg-[#243153] hover:bg-[#2E3C5D] border border-emerald-400/50 text-emerald-300'
+                      : 'bg-neutral-900 hover:bg-neutral-800 border border-emerald-500/30 text-emerald-400'
                   }`}
                 >
                   <Landmark className="w-3.5 h-3.5" />

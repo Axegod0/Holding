@@ -196,7 +196,6 @@
 .light-mode .text-slate-200 { color: #1E293B !important; }
 .light-mode .text-gray-100  { color: #0F172A !important; }
 .light-mode .text-gray-400  { color: #475569 !important; }
-.light-mode .border-\[#3A506B\] { border-color: #CBD5E1 !important; }
 
 /* ── Number Counter Animation ── */
 @keyframes countUp {
