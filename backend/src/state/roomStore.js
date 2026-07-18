@@ -725,8 +725,37 @@ export function rollDice(socketId) {
     };
   }
 
+  const roundsCompleted = Math.floor((room.gameState.totalTurnsCompleted || 0) / room.players.length);
+
   // Uluslararası Liman (#5) — Sahipsizse 5 turluk kiralama ihalesi başlat
   if (newPosition === 5 && !room.gameState.propertyOwnership[5]) {
+    if (roundsCompleted < 5) {
+      if (room.ioInstance) {
+        room.ioInstance.to(room.code).emit('server:logMessage', {
+          message: 'Liman (#5) ihalesi 5. tur tamamlanana kadar kapalıdır.',
+          type: 'warning'
+        });
+      }
+      advanceToNextTurn(room, isDouble);
+      const nextActivePlayerId = room.players[room.gameState.currentTurnIndex]?.id;
+      return {
+        success: true,
+        room,
+        playerId: socketId,
+        playerName: activePlayer.name,
+        dice: [dice1, dice2],
+        diceTotal,
+        oldPosition,
+        newPosition,
+        isDouble,
+        passedGo,
+        salaryAmount,
+        newBalance: playerState.balance,
+        currentTurnIndex: room.gameState.currentTurnIndex,
+        activePlayerId: nextActivePlayerId
+      };
+    }
+
     room.gameState.waitingForPortLease = {
       playerId: socketId,
       isDouble
@@ -753,6 +782,33 @@ export function rollDice(socketId) {
 
   // Türkiye Varlık Fonu (#37) — Sahipsizse 5 turluk işletme ihalesi başlat
   if (newPosition === 37 && !room.gameState.propertyOwnership[37]) {
+    if (roundsCompleted < 5) {
+      if (room.ioInstance) {
+        room.ioInstance.to(room.code).emit('server:logMessage', {
+          message: 'Türkiye Varlık Fonu (#37) ihalesi 5. tur tamamlanana kadar kapalıdır.',
+          type: 'warning'
+        });
+      }
+      advanceToNextTurn(room, isDouble);
+      const nextActivePlayerId = room.players[room.gameState.currentTurnIndex]?.id;
+      return {
+        success: true,
+        room,
+        playerId: socketId,
+        playerName: activePlayer.name,
+        dice: [dice1, dice2],
+        diceTotal,
+        oldPosition,
+        newPosition,
+        isDouble,
+        passedGo,
+        salaryAmount,
+        newBalance: playerState.balance,
+        currentTurnIndex: room.gameState.currentTurnIndex,
+        activePlayerId: nextActivePlayerId
+      };
+    }
+
     room.gameState.waitingForFundLease = {
       playerId: socketId,
       isDouble
@@ -1756,6 +1812,11 @@ export function startAuction(socketId, propertyId, io) {
   const room = getRoomBySocketId(socketId);
   if (!room || !room.isStarted || !room.gameState) return { success: false, error: 'Oyun aktif değil.' };
 
+  const roundsCompleted = Math.floor((room.gameState.totalTurnsCompleted || 0) / room.players.length);
+  if (roundsCompleted < 5) {
+    return { success: false, error: 'İhaleler 5. tur tamamlanana kadar (Tüm oyuncular başlangıçtan 5 kez geçene kadar) kapalıdır.' };
+  }
+
   if (room.gameState.activeAuction) {
     return { success: false, error: 'Odada zaten devam eden aktif bir ihale bulunmaktadır!' };
   }
@@ -2130,6 +2191,11 @@ function concludeAuction(room, io) {
 export function startSpecialAuction(roomCode, io) {
   const room = rooms.get(roomCode);
   if (!room || !room.isStarted || !room.gameState) return;
+
+  const roundsCompleted = Math.floor((room.gameState.totalTurnsCompleted || 0) / room.players.length);
+  if (roundsCompleted < 5) {
+    return;
+  }
 
   if (room.gameState.activeAuction?.timerId) {
     clearInterval(room.gameState.activeAuction.timerId);

@@ -1,20 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import useGameStore from '../store/gameStore.js';
 import socket from '../services/socket.js';
+import BOARD_DATA from '../constants/boardData.js';
+import { CHANCE_CARDS } from '../constants/chanceCards.js';
+import { X, DollarSign, TrendingDown, Dices, Landmark, Zap } from 'lucide-react';
 
 export default function AdminPanel() {
   const [isOpen, setIsOpen] = useState(false);
   const [keysPressed, setKeysPressed] = useState({});
   const players = useGameStore(state => state.players);
   const gameState = useGameStore(state => state.gameState);
+  const isHost = useGameStore(state => state.isHost);
   
-  const [selectedPlayerId, setSelectedPlayerId] = useState('');
-  const [amount, setAmount] = useState('');
-  const [globalMessage, setGlobalMessage] = useState('');
+  // States for actions
+  const [targetPlayerId, setTargetPlayerId] = useState('');
+  const [fundAmount, setFundAmount] = useState('');
+  
   const [dice1, setDice1] = useState('');
   const [dice2, setDice2] = useState('');
 
-  // Cmd/Ctrl + Shift + A + S + D
+  const [targetPropertyId, setTargetPropertyId] = useState('');
+  const [newOwnerId, setNewOwnerId] = useState(''); // 'state' for state ownership
+
+  const [chanceCardId, setChanceCardId] = useState('');
+  const [chanceTargetId, setChanceTargetId] = useState('');
+
+  // Keybind: Cmd/Ctrl + Shift + A + S + D
   useEffect(() => {
     const handleKeyDown = (e) => {
       const key = e.key.toLowerCase();
@@ -25,7 +36,9 @@ export default function AdminPanel() {
       
       if (cmdCtrl && e.shiftKey && 
           keysPressed['a'] && keysPressed['s'] && key === 'd') {
-        setIsOpen(prev => !prev);
+        if (isHost) {
+          setIsOpen(true);
+        }
       }
     };
 
@@ -40,139 +53,208 @@ export default function AdminPanel() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [keysPressed]);
+  }, [keysPressed, isHost]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isHost) return null;
 
-  const handleUpdateBalance = () => {
-    if (!selectedPlayerId || !amount) return;
-    socket.emit('client:adminAction', { 
-      action: 'updateBalance', 
-      targetId: selectedPlayerId, 
-      amount: Number(amount) 
-    });
-    setAmount('');
+  const handleAction = (action, payload) => {
+    socket.emit('client:adminAction', { action, ...payload });
   };
 
-  const handleSendGlobalMessage = () => {
-    if (!globalMessage) return;
-    socket.emit('client:adminAction', { 
-      action: 'globalMessage', 
-      message: globalMessage 
-    });
-    setGlobalMessage('');
-  };
-
-  const handleSetNextDice = () => {
-    if (!dice1 || !dice2) return;
-    socket.emit('client:adminAction', { 
-      action: 'setNextDice', 
-      dice1: Number(dice1), 
-      dice2: Number(dice2) 
-    });
+  const closePanel = () => {
+    setIsOpen(false);
+    // Clear states
+    setTargetPlayerId('');
+    setFundAmount('');
     setDice1('');
     setDice2('');
+    setTargetPropertyId('');
+    setNewOwnerId('');
+    setChanceCardId('');
+    setChanceTargetId('');
   };
 
+  const properties = BOARD_DATA.filter(s => s.type === 'property' || s.type === 'TRADE' || s.type === 'PORT' || s.type === 'MEDIA' || s.type === 'station' || s.type === 'utility');
+
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 p-4 font-mono select-none">
-      <div className="max-w-3xl w-full border border-green-500 bg-black p-6 shadow-[0_0_30px_rgba(34,197,94,0.3)] rounded text-green-500">
-        <div className="flex justify-between items-center mb-6 border-b border-green-800 pb-2">
-          <h2 className="text-2xl font-bold tracking-widest uppercase flex items-center gap-2">
-            <span className="animate-pulse">_</span> ROOT_ACCESS // OVERRIDE
-          </h2>
-          <button onClick={() => setIsOpen(false)} className="text-green-500 hover:text-green-400 border border-green-800 px-3 py-1 bg-green-900/20">
-            EXIT()
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 sm:p-8 overflow-y-auto animate-in fade-in duration-300">
+      <div className="max-w-5xl w-full bg-[#0a0a0a] border border-neutral-800 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden relative">
+        
+        {/* Header */}
+        <div className="bg-neutral-900/50 p-6 flex items-center justify-between border-b border-neutral-800">
+          <div className="flex items-center gap-4">
+            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
+            <h2 className="text-2xl font-black text-white tracking-widest uppercase">GÖLGE KABİNE</h2>
+          </div>
+          <button 
+            onClick={closePanel}
+            className="flex items-center gap-2 bg-red-950/30 hover:bg-red-900/50 text-red-500 hover:text-red-400 px-4 py-2 rounded-xl border border-red-900/50 transition-all font-bold tracking-wider"
+          >
+            <X className="w-5 h-5" /> İZLERİ SİL VE ÇIK
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-neutral-300">
           
-          {/* BALANCE OVERRIDE */}
-          <div className="border border-green-900 p-4 bg-green-950/10">
-            <h3 className="text-green-400 mb-4 border-b border-green-900 pb-1">-- BALANCE_OVERRIDE --</h3>
-            <div className="flex flex-col gap-3">
+          {/* 1. Kayıt Dışı Fon Aktar */}
+          <div className="bg-neutral-900/50 p-5 rounded-2xl border border-neutral-800/80 shadow-inner flex flex-col gap-4">
+            <h3 className="text-emerald-500 font-bold flex items-center gap-2 text-lg">
+              <DollarSign className="w-5 h-5" /> 💸 Kayıt Dışı Fon Aktar
+            </h3>
+            <p className="text-xs text-neutral-500">Seçilen oyuncunun kasasına anında para ekler.</p>
+            <select 
+              value={targetPlayerId} onChange={e => setTargetPlayerId(e.target.value)}
+              className="bg-black/50 border border-neutral-700 text-white rounded-xl p-3 outline-none focus:border-emerald-500 transition-colors"
+            >
+              <option value="">Oyuncu Seç</option>
+              {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <input 
+              type="number" placeholder="Miktar (Örn: 5000000)"
+              value={fundAmount} onChange={e => setFundAmount(e.target.value)}
+              className="bg-black/50 border border-neutral-700 text-white rounded-xl p-3 outline-none focus:border-emerald-500 transition-colors"
+            />
+            <button 
+              onClick={() => {
+                if(targetPlayerId && fundAmount) {
+                  handleAction('updateBalance', { targetId: targetPlayerId, amount: Number(fundAmount) });
+                  setFundAmount('');
+                }
+              }}
+              className="mt-auto bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-800/50 py-3 rounded-xl font-bold transition-all"
+            >
+              FONU AKTAR
+            </button>
+          </div>
+
+          {/* 2. Varlıklara El Koy */}
+          <div className="bg-neutral-900/50 p-5 rounded-2xl border border-neutral-800/80 shadow-inner flex flex-col gap-4">
+            <h3 className="text-red-500 font-bold flex items-center gap-2 text-lg">
+              <TrendingDown className="w-5 h-5" /> 📉 Varlıklara El Koy
+            </h3>
+            <p className="text-xs text-neutral-500">Seçilen oyuncunun parasını tamamen sıfırlar.</p>
+            <select 
+              id="confiscatePlayer"
+              className="bg-black/50 border border-neutral-700 text-white rounded-xl p-3 outline-none focus:border-red-500 transition-colors"
+            >
+              <option value="">Oyuncu Seç</option>
+              {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <button 
+              onClick={() => {
+                const el = document.getElementById('confiscatePlayer');
+                if(el.value) {
+                  handleAction('adminConfiscateWealth', { targetId: el.value });
+                  el.value = '';
+                }
+              }}
+              className="mt-auto bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-800/50 py-3 rounded-xl font-bold transition-all"
+            >
+              EL KOY
+            </button>
+          </div>
+
+          {/* 3. Kaderi Belirle */}
+          <div className="bg-neutral-900/50 p-5 rounded-2xl border border-neutral-800/80 shadow-inner flex flex-col gap-4">
+            <h3 className="text-purple-500 font-bold flex items-center gap-2 text-lg">
+              <Dices className="w-5 h-5" /> 🎲 Kaderi Belirle
+            </h3>
+            <p className="text-xs text-neutral-500">Bir sonraki atılacak zarı manuel olarak X ve Y şeklinde zorlar.</p>
+            <div className="flex gap-4">
+              <input 
+                type="number" min="1" max="6" placeholder="Zar 1"
+                value={dice1} onChange={e => setDice1(e.target.value)}
+                className="flex-1 bg-black/50 border border-neutral-700 text-white text-center rounded-xl p-3 outline-none focus:border-purple-500 transition-colors"
+              />
+              <input 
+                type="number" min="1" max="6" placeholder="Zar 2"
+                value={dice2} onChange={e => setDice2(e.target.value)}
+                className="flex-1 bg-black/50 border border-neutral-700 text-white text-center rounded-xl p-3 outline-none focus:border-purple-500 transition-colors"
+              />
+            </div>
+            <button 
+              onClick={() => {
+                if(dice1 && dice2) {
+                  handleAction('setNextDice', { dice1: Number(dice1), dice2: Number(dice2) });
+                  setDice1(''); setDice2('');
+                }
+              }}
+              className="mt-auto bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 border border-purple-800/50 py-3 rounded-xl font-bold transition-all"
+            >
+              ZARI ZORLA
+            </button>
+          </div>
+
+          {/* 4. Kayyum Ata / Tapuya Çök */}
+          <div className="bg-neutral-900/50 p-5 rounded-2xl border border-neutral-800/80 shadow-inner flex flex-col gap-4">
+            <h3 className="text-amber-500 font-bold flex items-center gap-2 text-lg">
+              <Landmark className="w-5 h-5" /> 📜 Kayyum Ata / Tapuya Çök
+            </h3>
+            <p className="text-xs text-neutral-500">Tahtadaki mülkü birinden alıp diğerine veya devlete geçirir.</p>
+            <select 
+              value={targetPropertyId} onChange={e => setTargetPropertyId(e.target.value)}
+              className="bg-black/50 border border-neutral-700 text-white rounded-xl p-3 outline-none focus:border-amber-500 transition-colors"
+            >
+              <option value="">Mülk Seç</option>
+              {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select 
+              value={newOwnerId} onChange={e => setNewOwnerId(e.target.value)}
+              className="bg-black/50 border border-neutral-700 text-white rounded-xl p-3 outline-none focus:border-amber-500 transition-colors"
+            >
+              <option value="">Yeni Sahip Seç</option>
+              <option value="state">Devlet (Sahipsiz)</option>
+              {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <button 
+              onClick={() => {
+                if(targetPropertyId && newOwnerId) {
+                  handleAction('adminTransferProperty', { propertyId: Number(targetPropertyId), newOwnerId });
+                  setTargetPropertyId(''); setNewOwnerId('');
+                }
+              }}
+              className="mt-auto bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 border border-amber-800/50 py-3 rounded-xl font-bold transition-all"
+            >
+              KAYYUM ATA
+            </button>
+          </div>
+
+          {/* 5. Kriz Tetikle (Force Event) */}
+          <div className="bg-neutral-900/50 p-5 rounded-2xl border border-neutral-800/80 shadow-inner flex flex-col gap-4 md:col-span-2">
+            <h3 className="text-sky-500 font-bold flex items-center gap-2 text-lg">
+              <Zap className="w-5 h-5" /> ⚡ Kriz Tetikle (Force Event)
+            </h3>
+            <p className="text-xs text-neutral-500">Seçilen şans veya kriz kartını anında oyuncunun ekranına düşürür.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <select 
-                value={selectedPlayerId}
-                onChange={e => setSelectedPlayerId(e.target.value)}
-                className="bg-black border border-green-800 text-green-500 p-2 outline-none focus:border-green-500"
+                value={chanceTargetId} onChange={e => setChanceTargetId(e.target.value)}
+                className="bg-black/50 border border-neutral-700 text-white rounded-xl p-3 outline-none focus:border-sky-500 transition-colors"
               >
-                <option value="">SELECT_TARGET</option>
-                {players.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} (Bakiye: {gameState?.playersState?.[p.id]?.balance?.toLocaleString()})</option>
-                ))}
+                <option value="">Kurban Seç</option>
+                <option value="ALL">Tüm Oyuncular (Global Kriz)</option>
+                {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              <input 
-                type="number"
-                placeholder="AMOUNT (e.g. 5000000 or -100000)"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                className="bg-black border border-green-800 text-green-500 p-2 outline-none focus:border-green-500"
-              />
-              <button 
-                onClick={handleUpdateBalance}
-                className="bg-green-900/40 border border-green-700 hover:bg-green-800 text-green-400 py-2 transition-all uppercase"
+              <select 
+                value={chanceCardId} onChange={e => setChanceCardId(e.target.value)}
+                className="bg-black/50 border border-neutral-700 text-white rounded-xl p-3 outline-none focus:border-sky-500 transition-colors"
               >
-                EXECUTE_TRANSACTION
-              </button>
+                <option value="">Olay Seç</option>
+                {CHANCE_CARDS.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+              </select>
             </div>
+            <button 
+              onClick={() => {
+                if(chanceTargetId && chanceCardId) {
+                  handleAction('adminForceChanceCard', { targetId: chanceTargetId, cardId: Number(chanceCardId) });
+                  setChanceCardId(''); setChanceTargetId('');
+                }
+              }}
+              className="w-full bg-sky-600/20 hover:bg-sky-600/40 text-sky-400 border border-sky-800/50 py-3 rounded-xl font-bold transition-all"
+            >
+              OLAYI TETİKLE
+            </button>
           </div>
 
-          {/* GLOBAL INJECTION */}
-          <div className="border border-green-900 p-4 bg-green-950/10">
-            <h3 className="text-green-400 mb-4 border-b border-green-900 pb-1">-- GLOBAL_INJECTION --</h3>
-            <div className="flex flex-col gap-3">
-              <textarea 
-                placeholder="ENTER_SYSTEM_MESSAGE..."
-                value={globalMessage}
-                onChange={e => setGlobalMessage(e.target.value)}
-                className="bg-black border border-green-800 text-green-500 p-2 outline-none focus:border-green-500 h-24 resize-none"
-              />
-              <button 
-                onClick={handleSendGlobalMessage}
-                className="bg-green-900/40 border border-green-700 hover:bg-green-800 text-green-400 py-2 transition-all uppercase"
-              >
-                BROADCAST_OVERRIDE
-              </button>
-            </div>
-          </div>
-
-          {/* RNG MANIPULATION */}
-          <div className="border border-green-900 p-4 bg-green-950/10 md:col-span-2 flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="flex flex-col">
-              <h3 className="text-green-400 mb-2">-- RNG_MANIPULATION --</h3>
-              <p className="text-xs text-green-700">Set next dice values for the simulation engine.</p>
-            </div>
-            <div className="flex gap-2 items-center">
-              <input 
-                type="number" min="1" max="6"
-                placeholder="D1"
-                value={dice1}
-                onChange={e => setDice1(e.target.value)}
-                className="bg-black border border-green-800 text-green-500 p-2 w-16 text-center outline-none focus:border-green-500"
-              />
-              <span className="text-green-800">+</span>
-              <input 
-                type="number" min="1" max="6"
-                placeholder="D2"
-                value={dice2}
-                onChange={e => setDice2(e.target.value)}
-                className="bg-black border border-green-800 text-green-500 p-2 w-16 text-center outline-none focus:border-green-500"
-              />
-              <button 
-                onClick={handleSetNextDice}
-                className="bg-green-900/40 border border-green-700 hover:bg-green-800 text-green-400 px-6 py-2 transition-all uppercase ml-4"
-              >
-                INJECT_DICE
-              </button>
-            </div>
-          </div>
-
-        </div>
-        
-        <div className="mt-6 text-xs text-green-800 flex justify-between border-t border-green-900 pt-2">
-          <span>TERMINAL SECURE CONNECTION ESTABLISHED.</span>
-          <span className="animate-pulse">_</span>
         </div>
       </div>
     </div>

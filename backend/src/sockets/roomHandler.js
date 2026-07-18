@@ -29,6 +29,7 @@ import {
   playCasinoAction,
   getRoomBySocketId
 } from '../state/roomStore.js';
+import { CHANCE_CARDS } from '../constants/chanceCards.js';
 import { logGame, clearLog } from '../utils/logger.js';
 
 // Shadow console locally so all console.log calls in this module write to game.log and standard output
@@ -638,6 +639,63 @@ export function registerRoomHandlers(io, socket) {
       });
     } else if (data.action === 'setNextDice') {
       room.gameState.adminNextDice = [data.dice1, data.dice2];
+    } else if (data.action === 'adminConfiscateWealth') {
+      const pState = room.gameState.playersState[data.targetId];
+      if (pState) {
+        pState.balance = 0;
+        io.to(room.code).emit('server:balanceUpdated', {
+          playerId: data.targetId,
+          newBalance: pState.balance,
+          reason: 'Varlıklara El Konuldu (Devlet Güvenliği)'
+        });
+        io.to(room.code).emit('server:logMessage', {
+          message: `🚨 GÖLGE KABİNE: Bir oyuncunun tüm varlıklarına devlet tarafından el konuldu!`,
+          type: 'error'
+        });
+      }
+    } else if (data.action === 'adminTransferProperty') {
+      const { propertyId, newOwnerId } = data;
+      if (room.gameState.propertyOwnership && room.gameState.propertyOwnership[propertyId]) {
+        if (newOwnerId === 'state') {
+          delete room.gameState.propertyOwnership[propertyId];
+          io.to(room.code).emit('server:logMessage', {
+            message: `🚨 GÖLGE KABİNE: Bir mülke devlet tarafından kayyum atandı ve el konuldu!`,
+            type: 'warning'
+          });
+        } else {
+          room.gameState.propertyOwnership[propertyId].ownerId = newOwnerId;
+          room.gameState.propertyOwnership[propertyId].houses = 0;
+          io.to(room.code).emit('server:logMessage', {
+            message: `🚨 GÖLGE KABİNE: Bir mülkün tapusu zorla devredildi!`,
+            type: 'warning'
+          });
+        }
+      }
+    } else if (data.action === 'adminForceChanceCard') {
+      const { targetId, cardId } = data;
+      const targetPlayer = room.players.find(p => p.id === targetId);
+      const cardObj = CHANCE_CARDS.find(c => c.id === cardId);
+      
+      if (targetId === 'ALL' && cardObj) {
+        io.to(room.code).emit('server:logMessage', {
+          message: `🚨 GLOBAL KRİZ TETİKLENDİ: ${cardObj.title}`,
+          type: 'error'
+        });
+      } else if (targetPlayer && cardObj) {
+        room.gameState.activeChanceCard = {
+          playerId: targetId,
+          card: cardObj
+        };
+        io.to(room.code).emit('server:showChanceCard', { 
+          playerId: targetId, 
+          playerName: targetPlayer.name, 
+          card: cardObj 
+        });
+        io.to(room.code).emit('server:logMessage', {
+          message: `⚡ ŞOK GELİŞME: ${targetPlayer.name} beklenmedik bir olayla karşılaştı!`,
+          type: 'warning'
+        });
+      }
     }
     
     io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
