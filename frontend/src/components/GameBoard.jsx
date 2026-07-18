@@ -87,6 +87,7 @@ export default function GameBoard() {
 
         if (activePlayerFinished && isTokenMoving) {
           useGameStore.setState({ isTokenMoving: false, movingTokenTarget: null });
+          useGameStore.getState().flushPendingLogs();
         }
 
         return hasChanges ? updated : prev;

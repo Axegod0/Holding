@@ -23,6 +23,7 @@ export const useGameStore = create((set, get) => ({
   gameState: null,
   lastDiceRoll: null,
   gameLogs: [],
+  pendingLogs: [],
   offeredProperty: null, // Sahipsiz şehre / ticaret mülküne ulaşıldığında satın alma modalı için
   activeTradeOffer: null, // FAZ 4: İşletme sahibinden gelen hammadde/ürün pazarlık teklifi
   activeSwapOffer: null, // FAZ 10: Gelişmiş bilateral takas teklifi
@@ -61,9 +62,29 @@ export const useGameStore = create((set, get) => ({
       text,
       type
     };
-    set(state => ({
-      gameLogs: [newLog, ...state.gameLogs].slice(0, 50)
-    }));
+
+    set(state => {
+      // Eğer zar dönüyorsa veya piyon hareket ediyorsa logları ekrana basma, kuyruğa al.
+      const isAnimating = state.isTokenMoving || (state.activeDiceAnimation && state.activeDiceAnimation.rolling);
+      
+      if (isAnimating) {
+        return { pendingLogs: [...state.pendingLogs, newLog] };
+      }
+
+      return { gameLogs: [newLog, ...state.gameLogs].slice(0, 50) };
+    });
+  },
+
+  flushPendingLogs: () => {
+    set(state => {
+      if (state.pendingLogs.length === 0) return {};
+      // Kuyruktaki logları al ve gameLogs'un en başına ekle (Ters çevirerek sırayı koruyalım)
+      const logsToAdd = [...state.pendingLogs].reverse();
+      return {
+        gameLogs: [...logsToAdd, ...state.gameLogs].slice(0, 50),
+        pendingLogs: []
+      };
+    });
   },
 
   setPlayerName: (name) => {
@@ -208,6 +229,11 @@ export const useGameStore = create((set, get) => ({
             }
           };
         });
+
+        // Eğer piyon hareket etmeyecekse (örneğin hapiste kalma durumu) zar animasyonu biter bitmez logları bas
+        if (!willMove) {
+          useGameStore.getState().flushPendingLogs();
+        }
       }, 2000);
 
       if (willMove) {
