@@ -113,7 +113,7 @@ export default function PropertyDetailModal({ propertyId, onClose }) {
                 </div>
                 <div className={`flex justify-between ${houseCount === 5 ? 'text-purple-500 font-bold' : textMuted}`}>
                   <span>Otel ⭐️</span>
-                  <span>{square.rent[6].toLocaleString('tr-TR')} ₺</span>
+                  <span>{Math.round(square.rent[5] * 2.5).toLocaleString('tr-TR')} ₺</span>
                 </div>
               </div>
             </div>

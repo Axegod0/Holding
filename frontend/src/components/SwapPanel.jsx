@@ -11,6 +11,7 @@ export default function SwapPanel() {
   const theme = useGameStore(state => state.theme);
 
   const myId = useGameStore(state => state.myId) || socket?.id;
+  const isSpectator = useGameStore(state => state.isSpectator);
 
   const [selectedTargetId, setSelectedTargetId] = useState('');
   const [offeredCash, setOfferedCash] = useState('0');
@@ -19,6 +20,22 @@ export default function SwapPanel() {
   const [selectedRequestedProps, setSelectedRequestedProps] = useState([]);
 
   if (!gameState) return null;
+
+  if (isSpectator) {
+    return (
+      <div className="w-full border rounded-3xl p-6 shadow-md dark:shadow-[0_0_35px_rgba(245,158,11,0.12)] space-y-5 text-center animate-fade-in bg-white dark:bg-[#1c1c1e] border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white">
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-500/40 flex items-center justify-center text-blue-500 dark:text-blue-400 mx-auto shadow-lg">
+          <Handshake className="w-7 h-7 animate-pulse" />
+        </div>
+        <div>
+          <h3 className="text-lg font-extrabold">Takas Teklifi Masası</h3>
+          <p className="text-xs font-mono max-w-md mx-auto mt-1 text-neutral-500 dark:text-neutral-400 font-bold">
+            👁️ SEYİRCİ MODU: Seyirci olarak oyundaki tapu veya nakit takas işlemlerini canlı olarak takip edebilirsiniz. Teklif hazırlama yetkiniz bulunmamaktadır.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const myState = gameState.playersState[myId] || { balance: 0 };
   const targetState = selectedTargetId ? gameState.playersState[selectedTargetId] : null;

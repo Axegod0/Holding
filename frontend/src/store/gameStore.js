@@ -41,6 +41,9 @@ export const useGameStore = create((set, get) => ({
   movingTokenTarget: null,
   activeJailAlert: null,
   activePortLeaseAuction: null, // Liman (#5) kiralama ihalesi bildirimi
+  activeTab: 'turn',
+  isSpectator: false,
+  spectators: [],
 
   // Bildirim / Toast Gösterme İşlevi
   showToast: (message, type = 'info', duration = 3500) => {
@@ -115,20 +118,27 @@ export const useGameStore = create((set, get) => ({
     });
 
     socket.on('server:roomUpdate', (data) => {
-      const { roomCode, players, isStarted, leftPlayerId, newHostId, gameState } = data;
+      const { roomCode, players, spectators, isStarted, leftPlayerId, newHostId, gameState } = data;
       
       const myInfo = players.find(p => p.id === socket.id);
+      const myInfoInSpecs = spectators?.find(s => s.id === socket.id);
       const amIHost = myInfo ? myInfo.isHost : false;
 
       set({
         roomCode,
         players,
+        spectators: spectators || [],
+        isSpectator: !!myInfoInSpecs,
         isHost: amIHost,
         gameStarted: isStarted
       });
 
       if (gameState) {
         set({ gameState });
+      }
+
+      if (isStarted && get().currentScreen === 'waiting') {
+        set({ currentScreen: 'game' });
       }
 
       if (leftPlayerId && newHostId === socket.id) {
@@ -641,7 +651,7 @@ export const useGameStore = create((set, get) => ({
     });
   },
 
-  joinRoom: (code, name) => {
+  joinRoom: (code, name, isSpectator = false) => {
     const trimmedCode = code.trim().toUpperCase();
     const trimmedName = name.trim();
 
@@ -657,15 +667,18 @@ export const useGameStore = create((set, get) => ({
     set({ loading: true, playerName: trimmedName });
     localStorage.setItem('holding_nickname', trimmedName);
 
-    socket.emit('client:joinRoom', { code: trimmedCode, name: trimmedName, colorId: null }, (res) => {
+    socket.emit('client:joinRoom', { code: trimmedCode, name: trimmedName, colorId: null, isSpectator }, (res) => {
       set({ loading: false });
       if (res && res.success) {
-        const myInfo = res.room.players.find(p => p.id === socket.id);
+        const myInfoInPlayers = res.room.players.find(p => p.id === socket.id);
+        const myInfoInSpecs = res.room.spectators?.find(s => s.id === socket.id);
         set({
           roomCode: res.room.code,
-          isHost: myInfo ? myInfo.isHost : false,
+          isHost: myInfoInPlayers ? myInfoInPlayers.isHost : false,
           players: res.room.players,
-          currentScreen: 'waiting'
+          spectators: res.room.spectators || [],
+          isSpectator: !!myInfoInSpecs,
+          currentScreen: res.room.isStarted ? 'game' : 'waiting'
         });
         get().showToast(`Odaya katılma başarılı!`, 'success');
       } else if (res && res.error) {
@@ -943,6 +956,7 @@ export const useGameStore = create((set, get) => ({
   setTheme: (theme) => set({ theme }),
   toggleTheme: () => set(state => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
   closeNewsFlash: () => set({ newsFlash: null }),
+  setActiveTab: (val) => set({ activeTab: val }),
 
   makeChanceDecision: (cardId, decision) => {
     set({ loading: true });
@@ -983,6 +997,9 @@ export const useGameStore = create((set, get) => ({
       activeAuction: null,
       activeBankModal: false,
       activeJailModal: false,
+      activeTab: 'turn',
+      isSpectator: false,
+      spectators: [],
       gameLogs: []
     });
     get().showToast('Odadan ayrıldınız.', 'info');

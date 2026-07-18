@@ -140,11 +140,11 @@ export default function PropertyModal() {
             </div>
             <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400">
               <span>🏠 1. Ev / 4. Ev Kirası</span>
-              <span className="text-neutral-900 dark:text-white">{offeredProperty.rent?.[1]?.toLocaleString('tr-TR')} ₺ / {offeredProperty.rent?.[4]?.toLocaleString('tr-TR')} ₺</span>
+              <span className="text-neutral-900 dark:text-white">{offeredProperty.rent?.[2]?.toLocaleString('tr-TR')} ₺ / {offeredProperty.rent?.[5]?.toLocaleString('tr-TR')} ₺</span>
             </div>
             <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-bold pt-1 border-t border-neutral-200 dark:border-neutral-800/60">
               <span>⭐️ Otel (Maksimum) Kirası</span>
-              <span>{offeredProperty.rent?.[5]?.toLocaleString('tr-TR')} ₺</span>
+              <span>{Math.round(offeredProperty.rent?.[5] * 2.5).toLocaleString('tr-TR')} ₺</span>
             </div>
           </div>
 

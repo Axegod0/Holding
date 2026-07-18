@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, Check, Users, Play, LogOut, Crown, Shield, Rocket, Radio, Palette } from 'lucide-react';
+import { Copy, Check, Users, Play, LogOut, Crown, Shield, Rocket, Radio, Palette, Eye } from 'lucide-react';
 import useGameStore from '../store/gameStore.js';
 import socket from '../services/socket.js';
 import { PAWN_COLORS } from '../constants/colors.js';
@@ -14,6 +14,8 @@ export default function WaitingRoom() {
   const leaveRoom = useGameStore(state => state.leaveRoom);
   const changeColor = useGameStore(state => state.changeColor);
   const showToast = useGameStore(state => state.showToast);
+  const isSpectator = useGameStore(state => state.isSpectator);
+  const spectators = useGameStore(state => state.spectators || []);
 
   const handleCopyCode = async () => {
     try {
@@ -95,9 +97,10 @@ export default function WaitingRoom() {
       </div>
 
       {/* Bekleme Odası İçi Hızlı Piyon Rengi Değiştirme */}
-      <div className="mb-6 p-4 rounded-2xl bg-white dark:bg-neutral-950/70 border border-neutral-200 dark:border-neutral-800 shadow-sm backdrop-blur-md">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-xs font-mono font-bold text-neutral-800 dark:text-neutral-300">
+      {!isSpectator && (
+        <div className="mb-6 p-4 rounded-2xl bg-white dark:bg-neutral-950/70 border border-neutral-200 dark:border-neutral-800 shadow-sm backdrop-blur-md">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-xs font-mono font-bold text-neutral-800 dark:text-neutral-300">
             <Palette className="w-4 h-4 text-amber-500 dark:text-amber-400" />
             <span>PİYON RENGİNİZİ DEĞİŞTİRİN</span>
           </div>
@@ -145,8 +148,9 @@ export default function WaitingRoom() {
               </button>
             );
           })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Oyuncu Listesi (Grid / Kutular) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -227,6 +231,24 @@ export default function WaitingRoom() {
           </div>
         ))}
       </div>
+
+      {/* Seyirci Listesi */}
+      {spectators.length > 0 && (
+        <div className="mb-6 p-5 rounded-2xl bg-white dark:bg-neutral-950/70 border border-neutral-200 dark:border-neutral-800 shadow-sm backdrop-blur-md">
+          <div className="flex items-center gap-2 text-xs font-mono font-bold text-blue-500 mb-3 uppercase tracking-wider">
+            <Eye className="w-4 h-4 text-blue-500" />
+            <span>ODA SEYİRCİLERİ ({spectators.length})</span>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            {spectators.map(spec => (
+              <span key={spec.id} className="px-3.5 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500 dark:text-blue-400 font-mono text-xs font-bold flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                {spec.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Alt Kontrol Paneli (Başlat & Ayrıl Butonları) */}
       <div className="glass-panel rounded-2xl p-5 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-4">

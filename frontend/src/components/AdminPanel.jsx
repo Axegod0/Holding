@@ -7,7 +7,6 @@ import { X, DollarSign, TrendingDown, Dices, Landmark, Zap } from 'lucide-react'
 
 export default function AdminPanel() {
   const [isOpen, setIsOpen] = useState(false);
-  const [keysPressed, setKeysPressed] = useState({});
   const players = useGameStore(state => state.players);
   const gameState = useGameStore(state => state.gameState);
   const isHost = useGameStore(state => state.isHost);
@@ -25,35 +24,25 @@ export default function AdminPanel() {
   const [chanceCardId, setChanceCardId] = useState('');
   const [chanceTargetId, setChanceTargetId] = useState('');
 
-  // Keybind: Cmd/Ctrl + Shift + A + S + D
+  // Keybind: Cmd/Ctrl + Shift + K to toggle panel
   useEffect(() => {
     const handleKeyDown = (e) => {
-      const key = e.key.toLowerCase();
-      setKeysPressed(prev => ({ ...prev, [key]: true }));
-
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const cmdCtrl = isMac ? e.metaKey : e.ctrlKey;
       
-      if (cmdCtrl && e.shiftKey && 
-          keysPressed['a'] && keysPressed['s'] && key === 'd') {
+      if (cmdCtrl && e.shiftKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
         if (isHost) {
-          setIsOpen(true);
+          setIsOpen(prev => !prev);
         }
       }
     };
 
-    const handleKeyUp = (e) => {
-      const key = e.key.toLowerCase();
-      setKeysPressed(prev => ({ ...prev, [key]: false }));
-    };
-
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [keysPressed, isHost]);
+  }, [isHost]);
 
   if (!isOpen || !isHost) return null;
 

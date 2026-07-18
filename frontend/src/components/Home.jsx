@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusCircle, LogIn, User, KeyRound, TrendingUp, BarChart3, ShieldAlert } from 'lucide-react';
+import { PlusCircle, LogIn, User, KeyRound, TrendingUp, BarChart3, ShieldAlert, Eye } from 'lucide-react';
 import useGameStore from '../store/gameStore.js';
 
 export default function Home() {
@@ -147,20 +147,41 @@ export default function Home() {
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading || !socketConnected || !playerName.trim() || roomCodeInput.length !== 6}
-              className="w-full py-3.5 px-4 rounded-xl bg-blue-600 text-neutral-100 font-mono font-bold text-sm hover:bg-blue-500 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4" />
-                  SIMÜLASYON ODASINA KATIL
-                </>
-              )}
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="submit"
+                disabled={loading || !socketConnected || !playerName.trim() || roomCodeInput.length !== 6}
+                className="flex-1 py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-neutral-100 font-mono font-bold text-xs active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <LogIn className="w-4 h-4 shrink-0" />
+                    <span>OYUNCU KATIL</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!socketConnected) return;
+                  joinRoom(roomCodeInput, playerName, true);
+                }}
+                disabled={loading || !socketConnected || !playerName.trim() || roomCodeInput.length !== 6}
+                className="flex-1 py-3.5 px-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-100 font-mono font-bold text-xs active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>SEYİRCİ KATIL</span>
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         )}
 

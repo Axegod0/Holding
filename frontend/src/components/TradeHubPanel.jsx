@@ -378,10 +378,10 @@ export default function TradeHubPanel() {
                 {(tradeState[35]?.activeStockTurns || 0) > 0 ? (
                   <>
                     <Sparkles className="w-4 h-4 text-pink-500 dark:text-pink-400 shrink-0" />
-                    <span>LÜKS KİRADA! RAKİP KİRASI: 2.600.000 ₺ 👑</span>
+                    <span>AKTİF AVM! KİRA & GELİR ARTIŞI %50 👑 (Giriş: 30.000 ₺)</span>
                   </>
                 ) : (
-                  <span>BOŞ VİTRİN ⚠️ GİRİŞ KİRASI: 5.000 ₺</span>
+                  <span>BOŞ VİTRİN ⚠️ GİRİŞ ÜCRETİ: 5.000 ₺</span>
                 )}
               </div>
             </div>

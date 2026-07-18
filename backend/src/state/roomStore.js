@@ -51,6 +51,7 @@ export function createRoom(socketId, playerName, preferredColorId = null) {
   const newRoom = {
     code,
     players: [hostPlayer],
+    spectators: [],
     isStarted: false,
     gameState: null,
     createdAt: new Date()
@@ -62,7 +63,7 @@ export function createRoom(socketId, playerName, preferredColorId = null) {
   return { success: true, room: newRoom };
 }
 
-export function joinRoom(roomCode, socketId, playerName, preferredColorId = null) {
+export function joinRoom(roomCode, socketId, playerName, preferredColorId = null, isSpectator = false) {
   if (!roomCode || !roomCode.trim()) {
     return { success: false, error: 'Oda kodu gereklidir.' };
   }
@@ -75,6 +76,31 @@ export function joinRoom(roomCode, socketId, playerName, preferredColorId = null
 
   if (!room) {
     return { success: false, error: 'Oda bulunamadı. Lütfen 6 haneli kodu kontrol edin.' };
+  }
+
+  if (!room.spectators) {
+    room.spectators = [];
+  }
+
+  if (isSpectator) {
+    const existingSpec = room.spectators.find(s => s.id === socketId);
+    if (existingSpec) {
+      existingSpec.name = playerName.trim();
+      return { success: true, room };
+    }
+
+    if (socketToRoom.has(socketId)) {
+      removePlayer(socketId);
+    }
+
+    const newSpec = {
+      id: socketId,
+      name: playerName.trim(),
+      isSpectator: true
+    };
+    room.spectators.push(newSpec);
+    socketToRoom.set(socketId, code);
+    return { success: true, room };
   }
 
   if (room.isStarted) {
@@ -155,6 +181,27 @@ export function removePlayer(socketId) {
 
   const removedPlayerIndex = room.players.findIndex(p => p.id === socketId);
   if (removedPlayerIndex === -1) {
+    if (!room.spectators) room.spectators = [];
+    const removedSpecIndex = room.spectators.findIndex(s => s.id === socketId);
+    if (removedSpecIndex !== -1) {
+      room.spectators.splice(removedSpecIndex, 1);
+      if (room.players.length === 0) {
+        rooms.delete(code);
+        return {
+          success: true,
+          roomCode: code,
+          roomClosed: true,
+          removedPlayerId: socketId
+        };
+      }
+      return {
+        success: true,
+        roomCode: code,
+        roomClosed: false,
+        room,
+        removedPlayerId: socketId
+      };
+    }
     return { success: false };
   }
 
@@ -700,12 +747,16 @@ export function rollDice(socketId) {
     };
   }
 
-  // Yeraltı Kumarhanesi / Blackjack (Kare 33) Kontrolü
+  // Yeraltı Kumarhanesi / Blackjack (Kare 33) Kontrolü (GECICI OLARAK DEVRE DISI BIRAKILDI)
   if (newPosition === 33) {
-    room.gameState.waitingForCasino = {
-      playerId: socketId,
-      isDouble
-    };
+    if (room.ioInstance) {
+      room.ioInstance.to(room.code).emit('server:logMessage', {
+        message: '🎰 Kumarhane (Blackjack) ve davet sistemi revizyon nedeniyle geçici olarak kapalıdır.',
+        type: 'warning'
+      });
+    }
+    advanceToNextTurn(room, isDouble);
+    const nextActivePlayerId = room.players[room.gameState.currentTurnIndex]?.id;
     return {
       success: true,
       room,
@@ -720,8 +771,7 @@ export function rollDice(socketId) {
       salaryAmount,
       newBalance: playerState.balance,
       currentTurnIndex: room.gameState.currentTurnIndex,
-      activePlayerId: activePlayer.id,
-      waitingForCasino: room.gameState.waitingForCasino
+      activePlayerId: nextActivePlayerId
     };
   }
 
@@ -894,7 +944,12 @@ export function rollDice(socketId) {
           if (houses === 0 && hasMonopoly) {
             rentAmount = (targetSquare.rent?.[0] || 0) * 2;
           } else if (houses > 0) {
-            rentAmount = targetSquare.rent?.[houses] || targetSquare.rent?.[0] || 0;
+            if (houses === 5) {
+              const OTEL_KIRA_CARPANI = 2.5;
+              rentAmount = Math.round((targetSquare.rent?.[5] || 0) * OTEL_KIRA_CARPANI);
+            } else {
+              rentAmount = targetSquare.rent?.[houses + 1] || targetSquare.rent?.[0] || 0;
+            }
           }
 
           if (room.gameState.chanceBuffs?.[ownerId]?.rentMultiplier > 1 && (targetSquare.group === 'group7' || targetSquare.group === 'green' || targetSquare.id === 31 || targetSquare.id === 32 || targetSquare.id === 34)) {
@@ -942,15 +997,13 @@ export function rollDice(socketId) {
             isMonopolyDouble: houses === 0 && hasMonopoly
           };
         } else if (targetSquare.type === 'TRADE' && targetSquare.subType === 'MALL') {
-          // FAZ 3/4 AVM Kira (Ayakbastı) Mekaniği (En Acımasız Kısım)
+          // FAZ 3/4 AVM Kira (Ayakbastı) Mekaniği
           const activeTurns = room.gameState.tradeState?.[35]?.activeStockTurns || 0;
-          let rentAmount = activeTurns > 0 ? 2600000 : 5000;
+          let rentAmount = activeTurns > 0 ? 30000 : 5000;
 
           if (room.gameState.chanceBuffs?.[ownerId]?.haltedBusinessTurns > 0) {
             rentAmount = 0;
           }
-
-          if (hasAvmBonus) rentAmount = Math.round(rentAmount * 1.5);
 
           playerState.balance -= rentAmount;
           if (ownerState) {
@@ -2274,9 +2327,10 @@ export function chanceCardDecision(socketId, { cardId, decision }) {
   const selectedOption = decision === 'A' ? card.optionA : card.optionB;
   const playerState = room.gameState.playersState[socketId];
   const player = room.players.find(p => p.id === socketId);
+  const playerName = player?.name || 'Oyuncu';
 
   let newsFlashTitle = `📰 BORSADA SON DAKİKA: ${card.title.toUpperCase()}`;
-  let newsFlashMessage = `${player?.name || 'Oyuncu'} şans kartında [Seçenek ${decision}: ${selectedOption.label}] kararını aldı. `;
+  let newsFlashMessage = '';
 
   // Maliyet kesintisi veya nakit girişi (Örn: Katar ortaklığı cost = -150000)
   if (selectedOption.cost !== 0 && selectedOption.cost !== undefined) {
@@ -2291,25 +2345,25 @@ export function chanceCardDecision(socketId, { cardId, decision }) {
             const mediaOwnerPlayer = room.players.find(p => p.id === mediaOwnerId);
             if (mediaOwnerState) {
               mediaOwnerState.balance += selectedOption.cost;
-              newsFlashMessage += `Ödenen ${selectedOption.cost?.toLocaleString('tr-TR')} ₺ rüşvet/PR bedeli doğrudan Medya Şirketi sahibi ${mediaOwnerPlayer?.name || 'Oyuncu'}'nun kasasına aktarıldı! `;
+              newsFlashMessage += `${playerName}, ödediği ${selectedOption.cost?.toLocaleString('tr-TR')} ₺ rüşvet/PR bedeliyle doğrudan Medya Şirketi sahibi ${mediaOwnerPlayer?.name || 'Oyuncu'}'nun kasasına katkıda bulundu! `;
             }
           } else {
             // Medya sahibi kendisi ise ödeme yapmaz (net 0)
             playerState.balance += selectedOption.cost; // İade et
-            newsFlashMessage += `Sahibi olduğu Medya Şirketi sayesinde herhangi bir PR/rüşvet bedeli ödemedi (Kendi PR şirketi)! `;
+            newsFlashMessage += `${playerName}, kendi sahibi olduğu Medya Şirketi sayesinde herhangi bir PR/rüşvet bedeli ödemeden süreci atlattı! `;
           }
         } else {
           newsFlashMessage += `Ödenen ${selectedOption.cost?.toLocaleString('tr-TR')} ₺ bedel devlete (bankaya) aktarıldı. `;
         }
       } else {
-        newsFlashMessage += `Kasasından ${selectedOption.cost?.toLocaleString('tr-TR')} ₺ ödeme yaptı. `;
+        newsFlashMessage += `${playerName}, kasasından ${selectedOption.cost?.toLocaleString('tr-TR')} ₺ ödeme yaptı. `;
       }
     } else if (selectedOption.cost < 0) {
-      newsFlashMessage += `Kasasına anında ${(-selectedOption.cost)?.toLocaleString('tr-TR')} ₺ sıcak para girdi. `;
+      newsFlashMessage += `${playerName}${getPossessiveSuffix(playerName)} kasasına anında ${(-selectedOption.cost)?.toLocaleString('tr-TR')} ₺ sıcak para girdi. `;
     }
   } else {
     if (!selectedOption.actionType || selectedOption.actionType === 'none') {
-      newsFlashMessage += `Herhangi bir ek masrafa veya riske girilmedi. `;
+      newsFlashMessage += `${playerName} herhangi bir ek masrafa veya riske girmedi. `;
     }
   }
 
@@ -2321,16 +2375,16 @@ export function chanceCardDecision(socketId, { cardId, decision }) {
   if (selectedOption.actionType === 'startup_invest') {
     if (Math.random() < 0.40) {
       playerState.balance += selectedOption.cost * 3;
-      newsFlashMessage += `🚀 YATIRIM PATLAMA YAPTI! Girişim 3 katına satıldı ve kasaya +${(selectedOption.cost * 3)?.toLocaleString('tr-TR')} ₺ girdi!`;
+      newsFlashMessage += `🚀 YATIRIM PATLAMA YAPTI! Girişim 3 katına satıldı ve ${playerName}${getPossessiveSuffix(playerName)} kasasına +${(selectedOption.cost * 3)?.toLocaleString('tr-TR')} ₺ girdi!`;
     } else {
-      newsFlashMessage += `📉 Girişim başarısız oldu ve yatırılan paralar eridi.`;
+      newsFlashMessage += `📉 Girişim başarısız oldu ve ${playerName}${getPossessiveSuffix(playerName)} yatırdığı paralar eridi.`;
     }
   } else if (selectedOption.actionType === 'esports_invest') {
     if (Math.random() < 0.55) {
       playerState.balance += selectedOption.cost * 2;
-      newsFlashMessage += `🎮 ŞAMPİYONLUK! Sponsor olunan takım turnuvayı kazandı (+${(selectedOption.cost * 2)?.toLocaleString('tr-TR')} ₺ getiri)!`;
+      newsFlashMessage += `🎮 ŞAMPİYONLUK! Sponsor olunan takım turnuvayı kazandı ve ${playerName}${getPossessiveSuffix(playerName)} kasasına +${(selectedOption.cost * 2)?.toLocaleString('tr-TR')} ₺ getiri girdi!`;
     } else {
-      newsFlashMessage += `🕹️ E-Spor takımı ilk turda elendi, sponsorluk bedeli boşa gitti.`;
+      newsFlashMessage += `🕹️ E-Spor takımı ilk turda elendi, ${playerName}${getPossessiveSuffix(playerName)} sponsorluk bedeli boşa gitti.`;
     }
   } else if (selectedOption.actionType === 'state_tender') {
     const portOwnerId = room.gameState.propertyOwnership?.[5]?.ownerId;
@@ -2345,37 +2399,37 @@ export function chanceCardDecision(socketId, { cardId, decision }) {
     if (Math.random() < 0.60) {
       myBuffs.tenderIncome = 35000;
       myBuffs.tenderIncomeTurns = 3;
-      newsFlashMessage += `🏗️ İHALE KAZANILDI! 3 tur boyunca her tur başında kasaya +35.000 ₺ düzenli nakit akışı sağlanacak!`;
+      newsFlashMessage += `🏗️ İHALE KAZANILDI! ${playerName} ihaleyi kazandı, 3 tur boyunca her tur başında kasasına +35.000 ₺ düzenli nakit akışı sağlanacak!`;
     } else {
       newsFlashMessage += `❌ İhale kaybedildi, giriş bedeli devlete kaldı.`;
     }
   } else if (selectedOption.actionType === 'defy_slander') {
     myBuffs.earningsRatio = 0.50;
     myBuffs.earningsTurns = 3;
-    newsFlashMessage += `⚠️ Rüşvet vermeyi reddetti ama hisseleri çakıldı! 3 tur boyunca tüm kazançları %50 kesintili olacak.`;
+    newsFlashMessage += `⚠️ ${playerName} rüşvet vermeyi reddetti ama hisseleri çakıldı! 3 tur boyunca tüm kazançları %50 kesintili olacak.`;
   } else if (selectedOption.actionType === 'qatar_partnership') {
     myBuffs.qatarPartner = true;
-    newsFlashMessage += `🤝 KATAR ORTAKLIGI! Bundan sonra tüm işletme gelirlerinin %40'ı fona kesilecek.`;
+    newsFlashMessage += `🤝 KATAR ORTAKLIĞI! ${playerName}${getPossessiveSuffix(playerName)} tüm işletme gelirlerinin %40'ı bundan sonra fona kesilecek.`;
   } else if (selectedOption.actionType === 'stock_adventure') {
     const invested = Math.round(playerState.balance * 0.50);
     playerState.balance -= invested;
     if (Math.random() < 0.55) {
       playerState.balance += invested * 2;
-      newsFlashMessage += `📈 BORSADA RALLİ! Yatırdığı ${invested?.toLocaleString('tr-TR')} ₺ hisseyi ikiye katladı (+${(invested * 2)?.toLocaleString('tr-TR')} ₺)!`;
+      newsFlashMessage += `📈 BORSADA RALLİ! ${playerName} yatırdığı ${invested?.toLocaleString('tr-TR')} ₺ hisseyi ikiye katladı (+${(invested * 2)?.toLocaleString('tr-TR')} ₺)!`;
     } else {
-      newsFlashMessage += `📉 BORSA ÇAKILDI! Borsaya yatırdığı ${invested?.toLocaleString('tr-TR')} ₺ nakit parası eridi!`;
+      newsFlashMessage += `📉 BORSA ÇAKILDI! ${playerName}${getPossessiveSuffix(playerName)} borsaya yatırdığı ${invested?.toLocaleString('tr-TR')} ₺ nakit parası eridi!`;
     }
   } else if (selectedOption.actionType === 'tax_immunity') {
     myBuffs.taxImmunity = true;
     myBuffs.taxImmunityTurns = 2;
-    newsFlashMessage += `🛡️ VERGİ MUAFİYETİ! 2 tur boyunca hiçbir hazine vergisi ve gümrük komisyonu ödemeyecek.`;
+    newsFlashMessage += `🛡️ VERGİ MUAFİYETİ! ${playerName} 2 tur boyunca hiçbir hazine vergisi ve gümrük komisyonu ödemeyecek.`;
   } else if (selectedOption.actionType === 'housing_support') {
     myBuffs.housingSupport = { level2Turns: 2, level3Turns: 1 };
-    newsFlashMessage += `🏡 DEVLET KONUT DESTEĞİ! 2 evli mülklerinin kirası 2 tur, 3 evli mülklerinin kirası 1 tur boyunca 2 katına çıktı!`;
+    newsFlashMessage += `🏡 DEVLET KONUT DESTEĞİ! ${playerName}${getPossessiveSuffix(playerName)} 2 evli mülklerinin kirası 2 tur, 3 evli mülklerinin kirası 1 tur boyunca 2 katına çıktı!`;
   } else if (selectedOption.actionType === 'build_incentive') {
     myBuffs.buildDiscount = 0.45;
     myBuffs.buildDiscountTurns = 1;
-    newsFlashMessage += `🏗️ İNŞAAT TEŞVİKİ! 1 tur boyunca tüm ev ve otel dikme maliyetleri %45 indirimli olacak.`;
+    newsFlashMessage += `🏗️ İNŞAAT TEŞVİKİ! ${playerName} için 1 tur boyunca tüm ev ve otel dikme maliyetleri %45 indirimli olacak.`;
   } else if (selectedOption.actionType === 'sabotage_port') {
     const portOwnerId = room.gameState.propertyOwnership?.[5]?.ownerId;
     if (!portOwnerId) {
@@ -2385,7 +2439,7 @@ export function chanceCardDecision(socketId, { cardId, decision }) {
       if (Math.random() < 0.10) {
         myBuffs.penaltyRatio = 0.30;
         myBuffs.penaltyRatioTurns = 5;
-        newsFlashMessage += `🚨 SKANDAL İFŞA OLDU! ${portOwner?.name || 'Liman sahibine'} kurulan kumpas ortaya çıktı! Haberi yaptıran oyuncunun 5 tur boyunca tüm gelirleri %30 kesilecek!`;
+        newsFlashMessage += `🚨 SKANDAL İFŞA OLDU! ${portOwner?.name || 'Liman sahibine'} kurulan kumpas ortaya çıktı! Komployu kuran ${playerName}${getPossessiveSuffix(playerName)} 5 tur boyunca tüm gelirleri %30 kesilecek!`;
       } else {
         delete room.gameState.propertyOwnership[5];
         newsFlashMessage += `⚓ LİMAN SÖZLEŞMESİ İPTAL EDİLDİ! Medyada çıkan belgeler sonrası ${portOwner?.name || 'Liman sahibinin'} sözleşmesi feshedildi ve mülk boşa düştü!`;
@@ -2394,22 +2448,22 @@ export function chanceCardDecision(socketId, { cardId, decision }) {
   } else if (selectedOption.actionType === 'scandal_penalty') {
     myBuffs.earningsRatio = 0.30;
     myBuffs.earningsTurns = 2;
-    newsFlashMessage += `📸 FUHUŞ SKANDALI PATLADI! Rüşvet vermeyi reddetti! İtibar kaybından dolayı 2 tur boyunca tüm kazançları %70 düşecek!`;
+    newsFlashMessage += `📸 FUHUŞ SKANDALI PATLADI! ${playerName} rüşvet vermeyi reddetti! İtibar kaybından dolayı 2 tur boyunca tüm kazançları %70 düşecek!`;
   } else if (selectedOption.actionType === 'rent_boost') {
     myBuffs.rentMultiplier = selectedOption.rentMultiplier || 1.5;
     myBuffs.rentTurns = selectedOption.turnsLeft || 3;
-    newsFlashMessage += `3 tur boyunca 7. Grup kiraları %50 zamlandı!`;
+    newsFlashMessage += `📈 ${playerName} için 3 tur boyunca 7. Grup kiraları %50 zamlandı!`;
   } else if (selectedOption.actionType === 'go_bonus') {
     if (!room.gameState.goBonus) room.gameState.goBonus = {};
     room.gameState.goBonus[socketId] = (room.gameState.goBonus[socketId] || 0) + (selectedOption.bonusAmount || 150000);
-    newsFlashMessage += `Bir sonraki Başlangıç (GO) geçişinde ek +150.000 ₺ prim tahsil edecek!`;
+    newsFlashMessage += `${playerName}, bir sonraki Başlangıç (GO) geçişinde ek +150.000 ₺ prim tahsil edecek!`;
   } else if (selectedOption.actionType === 'PAY_POLICE_BRIBE') {
-    newsFlashMessage += `🚨 RÜŞVETLE ÖRTBAS! Emniyet ve medyaya 80.000 TL ödeyerek oteldeki mafya hesaplaşmasını kapattı.`;
+    newsFlashMessage += `🚨 RÜŞVETLE ÖRTBAS! ${playerName} emniyet ve medyaya 80.000 TL ödeyerek oteldeki mafya hesaplaşmasını kapattı.`;
   } else if (selectedOption.actionType === 'HALT_HOTEL_INCOME') {
     myBuffs.haltedHotelTurns = 3;
-    newsFlashMessage += `🏨 OTEL MÜHÜRLENDİ! Mafya hesaplaşması basına yansıdı! En lüks oteli 3 tur boyunca kira getirmeyecek!`;
+    newsFlashMessage += `🏨 ${playerName}${getPossessiveSuffix(playerName)} OTELİ MÜHÜRLENDİ! Mafya hesaplaşması basına yansıdı! En lüks oteli 3 tur boyunca kira getirmeyecek!`;
   } else if (selectedOption.actionType === 'PAY_INSPECTOR_BRIBE') {
-    newsFlashMessage += `🚧 RÜŞVETLE İNŞAAT DEVAM! Denetmenlere 40.000 TL ödeyerek deniz kumu kullanılan kentsel dönüşüm projesinin durmasını engelledi.`;
+    newsFlashMessage += `🚧 RÜŞVETLE İNŞAAT DEVAM! ${playerName} denetmenlere 40.000 TL ödeyerek deniz kumu kullanılan kentsel dönüşüm projesinin durmasını engelledi.`;
   } else if (selectedOption.actionType === 'DESTROY_TOP_BUILDINGS') {
     let topPropId = null;
     let maxVal = -1;
@@ -2429,31 +2483,31 @@ export function chanceCardDecision(socketId, { cardId, decision }) {
       room.gameState.propertyOwnership[topPropId].houses = 0;
       calculatePlayerTotalAssetValue(room, socketId);
       const sq = BOARD_DATA.find(s => s.id === topPropId);
-      newsFlashMessage += `🏚️ BİNALAR YIKILDI! Belediye denetimi sonucu en değerli mülkü #${topPropId} (${sq?.name || 'Mülk'}) üzerindeki tüm ev ve oteller anında yıkıldı!`;
+      newsFlashMessage += `🏚️ BİNALAR YIKILDI! Belediye denetimi sonucu ${playerName}${getPossessiveSuffix(playerName)} en değerli mülkü #${topPropId} (${sq?.name || 'Mülk'}) üzerindeki tüm ev ve oteller anında yıkıldı!`;
     } else {
-      newsFlashMessage += `🏚️ Yıkılacak binası olmadığı için ceza yara almadan atlatıldı.`;
+      newsFlashMessage += `🏚️ ${playerName}${getPossessiveSuffix(playerName)} yıkılacak binası olmadığı için ceza yara almadan atlatıldı.`;
     }
   } else if (selectedOption.actionType === 'PAY_HACKER_RANSOM') {
-    newsFlashMessage += `💻 FİDYE ÖDENDİ! Siber korsanlara 50.000 TL ödeyerek holding sistemlerinin kilitlenmesini anında açtı.`;
+    newsFlashMessage += `💻 FİDYE ÖDENDİ! ${playerName} siber korsanlara 50.000 TL ödeyerek holding sistemlerinin kilitlenmesini anında açtı.`;
   } else if (selectedOption.actionType === 'RESET_SYSTEMS_HALT') {
     myBuffs.haltedBusinessTurns = 2;
-    newsFlashMessage += `⚠️ SİSTEMLER SIFIRLANDI! Siber saldırı nedeniyle tüm işletmeleri (Fabrika, Liman, AVM, Hammadde, Medya) 2 tur boyunca kapalı kalacak!`;
+    newsFlashMessage += `⚠️ SİSTEMLER SIFIRLANDI! Siber saldırı nedeniyle ${playerName}${getPossessiveSuffix(playerName)} tüm işletmeleri (Fabrika, Liman, AVM, Hammadde, Medya) 2 tur boyunca kapalı kalacak!`;
   } else if (selectedOption.actionType === 'GO_TO_JAIL_NO_SALARY') {
     playerState.position = 13;
     if (!room.gameState.jailState) room.gameState.jailState = {};
     room.gameState.jailState[socketId] = { inJail: true, turnsServed: 0, noSalaryThisTurn: true };
-    newsFlashMessage += `🚨 TUTUKLANDI! İçeriden bilgi ticareti belgelendi ve doğrudan Hapse (Gözaltı karesine) gönderildi!`;
+    newsFlashMessage += `🚨 TUTUKLANDI! ${playerName}${getPossessiveSuffix(playerName)} içeriden bilgi ticareti belgelendi ve doğrudan Hapse (Gözaltı karesine) gönderildi!`;
   } else if (selectedOption.actionType === 'PAY_UNION_DEATH_FINE') {
     myBuffs.haltedFactoryTurns = 2;
-    newsFlashMessage += `🏭 ÜRETİM DURDU! Sendika liderinin ölümü sonrası 50.000 TL tazminat ödedi, Fabrika ve Hammadde tesisleri 2 tur boyunca kapalı kalacak!`;
+    newsFlashMessage += `🏭 ÜRETİM DURDU! Sendika liderinin ölümü sonrası ${playerName} 50.000 TL tazminat ödedi, Fabrika ve Hammadde tesisleri 2 tur boyunca kapalı kalacak!`;
   } else if (selectedOption.actionType === 'PAY_CUSTOMS_FINE') {
-    newsFlashMessage += `🛃 DOSYA KAPANDI! Gümrükteki kaçak mal iddiaları için anında 100.000 TL ceza ödeyip dosyayı kapattı.`;
+    newsFlashMessage += `🛃 DOSYA KAPANDI! ${playerName} gümrükteki kaçak mal iddiaları için anında 100.000 TL ceza ödeyip dosyayı kapattı.`;
   } else if (selectedOption.actionType === 'LAWSUIT_CUSTOMS') {
     if (Math.random() < 0.50) {
-      newsFlashMessage += `⚖️ DAVA KAZANILDI! Avukatlar gümrük davasını mahkemede kazandı ve hiçbir ceza ödenmedi!`;
+      newsFlashMessage += `⚖️ DAVA KAZANILDI! ${playerName}${getPossessiveSuffix(playerName)} avukatları gümrük davasını mahkemede kazandı ve hiçbir ceza ödenmedi!`;
     } else {
       playerState.balance -= 130000;
-      newsFlashMessage += `⚖️ DAVA KAYBEDİLDİ! Mahkeme kaçak mallar için 130.000 TL ağır para cezası kesti (-130.000 ₺)!`;
+      newsFlashMessage += `⚖️ DAVA KAYBEDİLDİ! Mahkeme, ${playerName}${getPossessiveSuffix(playerName)} kaçak malları için 130.000 TL ağır para cezası kesti (-130.000 ₺)!`;
     }
   } else if (selectedOption.actionType === 'RIG_IRRIGATION_TENDER') {
     const hasHammadde = Object.entries(room.gameState.propertyOwnership || {}).some(
@@ -2461,16 +2515,16 @@ export function chanceCardDecision(socketId, { cardId, decision }) {
     );
     if (hasHammadde) {
       myBuffs.irrigationTender = { turnsLeft: 5, multiplier: 2 };
-      newsFlashMessage += `🤝 İHALEYE FESAT KARILDI! Komisyona 30.000 TL ödedi, Hammadde tesisinden 5 tur boyunca 2 kat üretim ve kira getirisi sağlayacak!`;
+      newsFlashMessage += `🤝 İHALEYE FESAT KARILDI! ${playerName} komisyona 30.000 TL ödedi, Hammadde tesisinden 5 tur boyunca 2 kat üretim ve kira getirisi sağlayacak!`;
     } else {
       playerState.balance += 120000;
-      newsFlashMessage += `🤝 İHALEYE FESAT KARILDI! Hammadde Tesisi (#12/#15) olmadığı için 2x Üretim yerine 120.000 ₺ Nakit Teşvik Ödülü aldı (+120.000 ₺)!`;
+      newsFlashMessage += `🤝 İHALEYE FESAT KARILDI! ${playerName} Hammadde Tesisi (#12/#15) olmadığı için 2x Üretim yerine 120.000 ₺ Nakit Teşvik Ödülü aldı (+120.000 ₺)!`;
     }
   } else if (selectedOption.actionType === 'TRIGGER_PUBLIC_AUCTION') {
-    newsFlashMessage += `⚡ AÇIK İHALE BAŞLIYOR! Sulama altyapısı ihalesi için tüm oyunculara açık olan 20 saniyelik ihale süreci tetiklendi!`;
+    newsFlashMessage += `⚡ AÇIK İHALE BAŞLIYOR! ${playerName} tarafından sulama altyapısı ihalesi için tüm oyunculara açık olan 20 saniyelik ihale süreci tetiklendi!`;
   } else if (selectedOption.actionType === 'RENT_TO_MOVIE_SET') {
     myBuffs.movieSetHalt = 1;
-    newsFlashMessage += `🎬 DİZİ SETİ KURULDU! Ünlü yönetmenin mafya dizisine mülkünü kiraladı (+70.000 ₺)! Ancak set kurulan mülkten 1 tur kira almayacak.`;
+    newsFlashMessage += `🎬 DİZİ SETİ KURULDU! ${playerName} ünlü yönetmenin mafya dizisine mülkünü kiraladı (+70.000 ₺)! Ancak set kurulan mülkten 1 tur kira almayacak.`;
   } else if (selectedOption.actionType === 'SELL_CHEAPEST_PROPERTY_HIGH') {
     let cheapestPropId = null;
     let minVal = Infinity;
@@ -2490,9 +2544,9 @@ export function chanceCardDecision(socketId, { cardId, decision }) {
       const sq = BOARD_DATA.find(s => s.id === cheapestPropId);
       delete room.gameState.propertyOwnership[cheapestPropId];
       calculatePlayerTotalAssetValue(room, socketId);
-      newsFlashMessage += `🤝 KONSORSİYUM SATIN ALMASI! Sahip olduğu en ucuz arsa #${cheapestPropId} (${sq?.name || 'Mülk'}) yabancı fona devredildi (+150.000 ₺)!`;
+      newsFlashMessage += `🤝 KONSORSİYUM SATIN ALMASI! ${playerName}${getPossessiveSuffix(playerName)} sahip olduğu en ucuz arsa #${cheapestPropId} (${sq?.name || 'Mülk'}) yabancı fona devredildi (+150.000 ₺)!`;
     } else {
-      newsFlashMessage += `🤝 Devredecek arsası olmadığı için sadece +150.000 ₺ hibe aldı.`;
+      newsFlashMessage += `🤝 ${playerName} devredecek arsası olmadığı için sadece +150.000 ₺ hibe aldı.`;
     }
   } else if (selectedOption.actionType === 'SMUGGLE_GOODS_60_40') {
     if (Math.random() < 0.60) {
@@ -2774,68 +2828,5 @@ export function submitBorsaInvestment(socketId, amount) {
 }
 
 export function playCasinoAction(socketId, betAmount, result) {
-  const room = getRoomBySocketId(socketId);
-  if (!room || !room.gameState) return { success: false, error: 'Oyun bulunamadı.' };
-  
-  const playerState = room.gameState.playersState[socketId];
-  if (!playerState) return { success: false, error: 'Oyuncu bulunamadı.' };
-  
-  let resultMessage = '';
-  const playerName = room.players.find(p => p.id === socketId)?.name || 'Oyuncu';
-  
-  if (result === 'win') {
-    playerState.balance += betAmount;
-    resultMessage = `🎰 YERALTI KUMARHANESİ: ${playerName} KAZANDI ve ${betAmount.toLocaleString('tr-TR')} ₺ elde etti!`;
-  } else if (result === 'lose') {
-    playerState.balance -= betAmount;
-    resultMessage = `🎰 YERALTI KUMARHANESİ: ${playerName} KAYBETTİ ve ${betAmount.toLocaleString('tr-TR')} ₺ masada kaldı!`;
-  } else {
-    // draw
-    resultMessage = `🎰 YERALTI KUMARHANESİ: ${playerName} BERABERE!`;
-  }
-  
-  if (room.ioInstance) {
-    room.ioInstance.to(room.code).emit('server:logMessage', {
-      message: resultMessage,
-      type: result === 'win' ? 'success' : (result === 'lose' ? 'error' : 'info')
-    });
-  }
-  
-  let currentTurnIndex = room.gameState.currentTurnIndex;
-  let activePlayerId = room.players[currentTurnIndex]?.id;
-
-  const session = room.gameState.casinoSession;
-  if (session) {
-    if (!session.finishedPlayers.includes(socketId)) {
-      session.finishedPlayers.push(socketId);
-    }
-    
-    // Check if everyone finished
-    if (session.finishedPlayers.length >= session.joinedPlayers.length) {
-      const isDouble = session.isDouble;
-      room.gameState.waitingForCasino = null;
-      room.gameState.casinoSession = null;
-      advanceToNextTurn(room, isDouble);
-      
-      currentTurnIndex = room.gameState.currentTurnIndex;
-      activePlayerId = room.players[currentTurnIndex]?.id;
-    }
-  } else if (room.gameState.waitingForCasino && room.gameState.waitingForCasino.playerId === socketId) {
-    // Fallback for single player if session missing
-    const isDouble = room.gameState.waitingForCasino.isDouble;
-    room.gameState.waitingForCasino = null;
-    advanceToNextTurn(room, isDouble);
-    
-    currentTurnIndex = room.gameState.currentTurnIndex;
-    activePlayerId = room.players[currentTurnIndex]?.id;
-  }
-  
-  return {
-    success: true,
-    room,
-    playerId: socketId,
-    newBalance: playerState.balance,
-    currentTurnIndex,
-    activePlayerId
-  };
+  return { success: false, error: 'Kumarhane sistemi geçici olarak devre dışıdır.' };
 }

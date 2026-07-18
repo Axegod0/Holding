@@ -214,7 +214,11 @@ export default function PropertyManagementModal() {
                 </p>
                 <div className="pt-2 border-t border-amber-200 dark:border-amber-500/20 flex justify-between items-center text-[11px]">
                   <span>Hizmet Bedeli:</span>
-                  <strong className="text-amber-600 dark:text-amber-300 font-bold">{(activePropertyManagement.rent?.[0] || (activePropertyManagement.id === 35 ? 2600000 : 15000))?.toLocaleString('tr-TR')} ₺</strong>
+                  <strong className="text-amber-600 dark:text-amber-300 font-bold">
+                    {activePropertyManagement.id === 35 
+                      ? "30.000 ₺ (Aktif) / 5.000 ₺ (Boş)" 
+                      : (activePropertyManagement.rent?.[0] || 15000).toLocaleString('tr-TR') + " ₺"}
+                  </strong>
                 </div>
               </div>
               {isMe && (
@@ -247,23 +251,23 @@ export default function PropertyManagementModal() {
                 </div>
                 <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400">
                   <span>🏠 1 Evli Kira</span>
-                  <span className="text-neutral-900 dark:text-white font-bold">{(activePropertyManagement.rent?.[1])?.toLocaleString('tr-TR')} ₺</span>
-                </div>
-                <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400">
-                  <span>🏠🏠 2 Evli Kira</span>
                   <span className="text-neutral-900 dark:text-white font-bold">{(activePropertyManagement.rent?.[2])?.toLocaleString('tr-TR')} ₺</span>
                 </div>
                 <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400">
-                  <span>🏠🏠🏠 3 Evli Kira</span>
+                  <span>🏠🏠 2 Evli Kira</span>
                   <span className="text-neutral-900 dark:text-white font-bold">{(activePropertyManagement.rent?.[3])?.toLocaleString('tr-TR')} ₺</span>
                 </div>
                 <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400">
-                  <span>🏠🏠🏠🏠 4 Evli Kira</span>
+                  <span>🏠🏠🏠 3 Evli Kira</span>
                   <span className="text-neutral-900 dark:text-white font-bold">{(activePropertyManagement.rent?.[4])?.toLocaleString('tr-TR')} ₺</span>
+                </div>
+                <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400">
+                  <span>🏠🏠🏠🏠 4 Evli Kira</span>
+                  <span className="text-neutral-900 dark:text-white font-bold">{(activePropertyManagement.rent?.[5])?.toLocaleString('tr-TR')} ₺</span>
                 </div>
                 <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 font-extrabold pt-1.5 border-t border-neutral-200 dark:border-neutral-800/60">
                   <span>⭐️ Otelli Kira (Maksimum)</span>
-                  <span>{(activePropertyManagement.rent?.[5])?.toLocaleString('tr-TR')} ₺</span>
+                  <span>{Math.round(activePropertyManagement.rent?.[5] * 2.5)?.toLocaleString('tr-TR')} ₺</span>
                 </div>
               </div>
 

@@ -43,7 +43,9 @@ export default function GameBoard() {
   const theme = useGameStore(state => state.theme);
   const toggleTheme = useGameStore(state => state.toggleTheme);
 
-  const [activeTab, setActiveTab] = useState('turn');
+  const activeTab = useGameStore(state => state.activeTab || 'turn');
+  const setActiveTab = useGameStore(state => state.setActiveTab);
+  const isSpectator = useGameStore(state => state.isSpectator);
   const [displayPositions, setDisplayPositions] = useState({});
 
   useEffect(() => {
@@ -113,6 +115,31 @@ export default function GameBoard() {
     }
     rollDice();
   };
+
+  // Space tuşu ile zar atma dinleyicisi
+  useEffect(() => {
+    const handleSpacePress = (e) => {
+      if (
+        document.activeElement.tagName === 'INPUT' ||
+        document.activeElement.tagName === 'TEXTAREA' ||
+        document.activeElement.isContentEditable
+      ) {
+        return;
+      }
+
+      if (e.code === 'Space' || e.key === ' ') {
+        e.preventDefault();
+        if (isMyTurn && !loading) {
+          handleRollClick();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleSpacePress);
+    return () => {
+      window.removeEventListener('keydown', handleSpacePress);
+    };
+  }, [isMyTurn, loading, gameState, myState, myId]);
 
   // Kare Tipine Göre İkon Seçici
   const getSquareIcon = (type) => {
@@ -538,7 +565,14 @@ export default function GameBoard() {
                   </div>
 
                   {/* Zar At Butonu (Gündüz/Gece net okunur & tam uyumlu) */}
-                  {isMyTurn ? (
+                  {isSpectator ? (
+                    <div className={`px-5 py-2.5 rounded-xl border text-[11px] font-mono text-center w-full flex items-center justify-center gap-2 ${
+                      isLight ? 'bg-blue-50 border-blue-200 text-blue-700 font-bold' : 'bg-blue-950/20 border-blue-900/50 text-blue-400 font-bold'
+                    }`}>
+                      <Activity className="w-4 h-4 text-blue-500 animate-pulse shrink-0" />
+                      <span>👁️ SEYİRCİ MODU: Sıradaki oyuncuyu ({activePlayer?.name || 'Yatırımcı'}) izliyorsunuz.</span>
+                    </div>
+                  ) : isMyTurn ? (
                     <button
                       onClick={handleRollClick}
                       disabled={loading}
@@ -579,28 +613,37 @@ export default function GameBoard() {
             <div className={`pt-2 border-t flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono ${
               isLight ? 'border-neutral-200 text-neutral-700 font-bold' : 'border-neutral-800 text-neutral-400'
             }`}>
-              <div className="flex items-center gap-3">
-                <span className={`flex items-center gap-1 ${isLight ? 'text-emerald-800' : 'text-emerald-400'} font-extrabold`}>
-                  <DollarSign className="w-3.5 h-3.5 -mr-1" />
-                  Kasamız: {myState.balance?.toLocaleString('tr-TR')} ₺
-                </span>
-                <span className={`${isLight ? 'text-cyan-800' : 'text-cyan-400'} font-extrabold`}>
-                  Tapu Varlığımız: {myState.totalAssetValue?.toLocaleString('tr-TR') || 0} ₺
-                </span>
-              </div>
-              <div>
-                <button
-                  onClick={() => setActiveBankModal(true)}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 text-[11px] ${
-                    isLight 
-                      ? 'bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 shadow-sm' 
-                      : 'bg-neutral-900 hover:bg-neutral-800 border border-emerald-500/30 text-emerald-400'
-                  }`}
-                >
-                  <Landmark className="w-3.5 h-3.5" />
-                  <span>Merkez Bankası (#20)</span>
-                </button>
-              </div>
+              {isSpectator ? (
+                <div className="flex items-center gap-2 text-blue-500 font-bold uppercase tracking-wider">
+                  <Activity className="w-4 h-4 animate-pulse" />
+                  <span>Canlı Simülasyonu İzliyorsunuz (Seyirci)</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <span className={`flex items-center gap-1 ${isLight ? 'text-emerald-800' : 'text-emerald-400'} font-extrabold`}>
+                      <DollarSign className="w-3.5 h-3.5 -mr-1" />
+                      Kasamız: {myState.balance?.toLocaleString('tr-TR')} ₺
+                    </span>
+                    <span className={`${isLight ? 'text-cyan-800' : 'text-cyan-400'} font-extrabold`}>
+                      Tapu Varlığımız: {myState.totalAssetValue?.toLocaleString('tr-TR') || 0} ₺
+                    </span>
+                  </div>
+                  <div>
+                    <button
+                      onClick={() => setActiveBankModal(true)}
+                      className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 text-[11px] ${
+                        isLight 
+                          ? 'bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 shadow-sm' 
+                          : 'bg-neutral-900 hover:bg-neutral-800 border border-emerald-500/30 text-emerald-400'
+                      }`}
+                    >
+                      <Landmark className="w-3.5 h-3.5" />
+                      <span>Merkez Bankası (#20)</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
           </div>

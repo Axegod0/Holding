@@ -65,13 +65,14 @@ export function registerRoomHandlers(io, socket) {
     io.to(room.code).emit('server:roomUpdate', {
       roomCode: room.code,
       players: room.players,
+      spectators: room.spectators || [],
       isStarted: room.isStarted,
       gameState: room.gameState
     });
   });
 
-  socket.on('client:joinRoom', ({ code, name, colorId }, callback = () => {}) => {
-    const result = joinRoom(code, socket.id, name, colorId);
+  socket.on('client:joinRoom', ({ code, name, colorId, isSpectator }, callback = () => {}) => {
+    const result = joinRoom(code, socket.id, name, colorId, isSpectator);
 
     if (!result.success) {
       socket.emit('server:error', { message: result.error });
@@ -82,12 +83,13 @@ export function registerRoomHandlers(io, socket) {
     Object.defineProperty(room, 'ioInstance', { value: io, enumerable: false, writable: true, configurable: true });
     socket.join(room.code);
 
-    console.log(`[Odaya Katıldı]: ${room.code} - Oyuncu: ${name} (${socket.id})`);
+    console.log(`[Odaya Katıldı]: ${room.code} - Oyuncu: ${name} (${socket.id}) ${isSpectator ? '(Seyirci)' : ''}`);
 
     callback({ success: true, room });
     io.to(room.code).emit('server:roomUpdate', {
       roomCode: room.code,
       players: room.players,
+      spectators: room.spectators || [],
       isStarted: room.isStarted,
       gameState: room.gameState
     });
@@ -105,6 +107,7 @@ export function registerRoomHandlers(io, socket) {
     io.to(room.code).emit('server:roomUpdate', {
       roomCode: room.code,
       players: room.players,
+      spectators: room.spectators || [],
       isStarted: room.isStarted,
       gameState: room.gameState
     });
@@ -594,65 +597,22 @@ export function registerRoomHandlers(io, socket) {
     callback({ success: true, result });
   });
 
-  // MULTIPLAYER CASINO İŞLEMLERİ
+  // MULTIPLAYER CASINO İŞLEMLERİ (GECICI OLARAK DEVRE DISI)
   socket.on('client:sendCasinoInvite', () => {
-    const room = getRoomBySocketId(socket.id);
-    if (!room || !room.gameState.waitingForCasino || room.gameState.waitingForCasino.playerId !== socket.id) return;
-    
-    room.gameState.casinoSession = {
-      hostId: socket.id,
-      status: 'lobby',
-      joinedPlayers: [socket.id],
-      finishedPlayers: [],
-      isDouble: room.gameState.waitingForCasino.isDouble
-    };
-    
-    const hostName = room.players.find(p => p.id === socket.id)?.name || 'Biri';
-    socket.broadcast.to(room.code).emit('server:casinoInvite', { hostId: socket.id, hostName });
-    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    socket.emit('server:error', 'Kumarhane sistemi geçici olarak devre dışıdır.');
   });
 
   socket.on('client:acceptCasinoInvite', () => {
-    const room = getRoomBySocketId(socket.id);
-    if (!room || !room.gameState.casinoSession || room.gameState.casinoSession.status !== 'lobby') return;
-    
-    if (!room.gameState.casinoSession.joinedPlayers.includes(socket.id)) {
-      room.gameState.casinoSession.joinedPlayers.push(socket.id);
-      const playerName = room.players.find(p => p.id === socket.id)?.name || 'Oyuncu';
-      io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
-      io.to(room.code).emit('server:logMessage', { message: `🎰 ${playerName} Kumarhane davetini kabul etti!`, type: 'info' });
-    }
+    socket.emit('server:error', 'Kumarhane sistemi geçici olarak devre dışıdır.');
   });
 
   socket.on('client:startCasinoGame', () => {
-    const room = getRoomBySocketId(socket.id);
-    if (!room || !room.gameState.casinoSession || room.gameState.casinoSession.hostId !== socket.id) return;
-    
-    room.gameState.casinoSession.status = 'playing';
-    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    socket.emit('server:error', 'Kumarhane sistemi geçici olarak devre dışıdır.');
   });
 
-  // KUMARHANE OYNAMA İŞLEMİ (Kare 33)
+  // KUMARHANE OYNAMA İŞLEMİ (Kare 33) (GECICI OLARAK DEVRE DISI)
   socket.on('client:playCasino', (data) => {
-    const room = getRoomBySocketId(socket.id);
-    if (!room) return;
-    
-    const { betAmount, result: casinoResult } = data; // casinoResult: 'win', 'lose', 'draw'
-    const result = playCasinoAction(socket.id, betAmount, casinoResult);
-    
-    if (result.success) {
-      io.to(room.code).emit('server:balanceUpdated', {
-        playerId: socket.id,
-        newBalance: result.newBalance,
-        reason: 'Kumarhane / Blackjack Sonucu'
-      });
-      io.to(room.code).emit('server:turnUpdated', {
-        currentTurnIndex: result.currentTurnIndex,
-        activePlayerId: result.activePlayerId
-      });
-    } else {
-      socket.emit('server:error', result.error);
-    }
+    socket.emit('server:error', 'Kumarhane sistemi geçici olarak devre dışıdır.');
   });
 
   // GİZLİ ADMİN PANELİ / BACKDOOR
@@ -1167,6 +1127,7 @@ function handlePlayerExit(io, socket) {
     io.to(roomCode).emit('server:roomUpdate', {
       roomCode: room.code,
       players: room.players,
+      spectators: room.spectators || [],
       isStarted: room.isStarted,
       gameState: room.gameState,
       leftPlayerId: removedPlayerId,

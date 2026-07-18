@@ -5,6 +5,27 @@ import useGameStore from '../store/gameStore.js';
 export default function DiceRollerAnimation() {
   const activeDiceAnimation = useGameStore(state => state.activeDiceAnimation);
   const theme = useGameStore(state => state.theme);
+  const hasModalOpen = useGameStore(state => {
+    const myId = state.myId;
+    return !!(
+      state.activeBankModal ||
+      state.activeJailModal ||
+      state.offeredProperty ||
+      state.activeTradeOffer ||
+      state.activeSwapOffer ||
+      state.activeBusinessNaming ||
+      state.activeAuction ||
+      state.activeChanceCard ||
+      state.newsFlash ||
+      state.activeJailAlert ||
+      state.activePortLeaseAuction ||
+      state.activePropertyManagement ||
+      (state.activeTab && state.activeTab !== 'turn') ||
+      state.gameState?.waitingForCasino ||
+      state.gameState?.casinoSession ||
+      (state.gameState?.waitingForBorsa && state.gameState.waitingForBorsa.playerId === myId)
+    );
+  });
 
   const [displayDice1, setDisplayDice1] = useState(1);
   const [displayDice2, setDisplayDice2] = useState(1);
@@ -38,7 +59,7 @@ export default function DiceRollerAnimation() {
     };
   }, [activeDiceAnimation]);
 
-  if (!activeDiceAnimation || !activeDiceAnimation.rolling) return null;
+  if (!activeDiceAnimation || !activeDiceAnimation.rolling || hasModalOpen) return null;
 
   const { dice = [1, 1], diceTotal, playerName, isDouble } = activeDiceAnimation;
   return (
