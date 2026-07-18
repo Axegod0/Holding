@@ -19,8 +19,6 @@ import SwapPanel from './SwapPanel.jsx';
 import FinancialModal from './FinancialModal.jsx';
 import ChanceCardModal from './ChanceCardModal.jsx';
 import BorsaInvestmentModal from './BorsaInvestmentModal.jsx';
-import ActiveTurnModal from './ActiveTurnModal.jsx';
-import BorsaModal from './BorsaModal.jsx';
 import DiceRollerAnimation from './DiceRollerAnimation.jsx';
 import NewsFlashModal from './NewsFlashModal.jsx';
 import JailAlertModal from './JailAlertModal.jsx';
