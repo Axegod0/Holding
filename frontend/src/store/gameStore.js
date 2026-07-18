@@ -234,7 +234,7 @@ export const useGameStore = create((set, get) => ({
         if (!willMove) {
           useGameStore.getState().flushPendingLogs();
         }
-      }, 2000);
+      }, 1100);
 
       if (willMove) {
         setTimeout(() => {

@@ -43,7 +43,7 @@ export default function DiceRollerAnimation() {
       setDisplayDice2(Math.floor(Math.random() * 6) + 1);
     }, 80);
 
-    // 1200ms sonra zarlar sabitlensin ve gerçek sonuca otursun
+    // 600ms sonra zarlar sabitlensin ve gerçek sonuca otursun
     const timeout = setTimeout(() => {
       clearInterval(interval);
       setIsSettled(true);
@@ -51,7 +51,7 @@ export default function DiceRollerAnimation() {
         setDisplayDice1(activeDiceAnimation.dice[0]);
         setDisplayDice2(activeDiceAnimation.dice[1]);
       }
-    }, 1200);
+    }, 600);
 
     return () => {
       clearInterval(interval);
