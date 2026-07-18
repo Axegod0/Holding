@@ -678,7 +678,34 @@ export function rollDice(socketId) {
       newBalance: playerState.balance,
       currentTurnIndex: room.gameState.currentTurnIndex,
       activePlayerId: activePlayer.id,
-      waitingForPortLease: true
+      waitingForBorsa: room.gameState.waitingForBorsa,
+      waitingForPortLease: room.gameState.waitingForPortLease
+    };
+  }
+
+  // Türkiye Varlık Fonu (#37) — Sahipsizse 5 turluk işletme ihalesi başlat
+  if (newPosition === 37 && !room.gameState.propertyOwnership[37]) {
+    room.gameState.waitingForFundLease = {
+      playerId: socketId,
+      isDouble
+    };
+    return {
+      success: true,
+      room,
+      playerId: socketId,
+      playerName: activePlayer.name,
+      dice: [dice1, dice2],
+      diceTotal,
+      oldPosition,
+      newPosition,
+      isDouble,
+      passedGo,
+      salaryAmount,
+      newBalance: playerState.balance,
+      currentTurnIndex: room.gameState.currentTurnIndex,
+      activePlayerId: activePlayer.id,
+      waitingForBorsa: room.gameState.waitingForBorsa,
+      waitingForFundLease: room.gameState.waitingForFundLease
     };
   }
 
@@ -733,6 +760,10 @@ export function rollDice(socketId) {
           isMortgaged: true
         };
       } else {
+        const isAvmOwner = room.gameState.propertyOwnership?.[35]?.ownerId === ownerId;
+        const avmActiveTurns = room.gameState.tradeState?.[35]?.activeStockTurns || 0;
+        const hasAvmBonus = isAvmOwner && avmActiveTurns > 0;
+
         if (targetSquare.type === 'property') {
           const hasMonopoly = checkGroupMonopoly(room, ownerId, targetSquare.group);
           let rentAmount = targetSquare.rent?.[0] || 0;
@@ -758,6 +789,8 @@ export function rollDice(socketId) {
           if (room.gameState.chanceBuffs?.[ownerId]?.movieSetHalt > 0) {
             rentAmount = 0;
           }
+
+          if (hasAvmBonus) rentAmount = Math.round(rentAmount * 1.5);
 
           playerState.balance -= rentAmount;
           if (ownerState) {
@@ -793,6 +826,8 @@ export function rollDice(socketId) {
             rentAmount = 0;
           }
 
+          if (hasAvmBonus) rentAmount = Math.round(rentAmount * 1.5);
+
           playerState.balance -= rentAmount;
           if (ownerState) {
             let ownerReceived = rentAmount;
@@ -826,6 +861,8 @@ export function rollDice(socketId) {
             rentAmount = 0;
           }
 
+          if (hasAvmBonus) rentAmount = Math.round(rentAmount * 1.5);
+
           playerState.balance -= rentAmount;
           if (ownerState) {
             let ownerReceived = rentAmount;
@@ -855,6 +892,8 @@ export function rollDice(socketId) {
             rentAmount = 0;
           }
 
+          if (hasAvmBonus) rentAmount = Math.round(rentAmount * 1.5);
+
           playerState.balance -= rentAmount;
           if (ownerState) {
             let ownerReceived = rentAmount;
@@ -880,6 +919,8 @@ export function rollDice(socketId) {
           if (room.gameState.chanceBuffs?.[ownerId]?.haltedBusinessTurns > 0) {
             rentAmount = 0;
           }
+
+          if (hasAvmBonus) rentAmount = Math.round(rentAmount * 1.5);
 
           playerState.balance -= rentAmount;
           if (ownerState) {
@@ -974,6 +1015,13 @@ export function rollDice(socketId) {
     } else {
       taxPaid = Math.round(Math.max(0, playerState.balance * 0.10));
       playerState.balance -= taxPaid;
+
+      const fundOwnerId = room.gameState.propertyOwnership?.[37]?.ownerId;
+      if (fundOwnerId && room.gameState.playersState[fundOwnerId]) {
+        room.gameState.playersState[fundOwnerId].balance += taxPaid;
+      } else {
+        room.gameState.wealthFundPool = (room.gameState.wealthFundPool || 0) + taxPaid;
+      }
     }
   }
 
@@ -1223,6 +1271,54 @@ export function buildHouse(socketId, propertyId) {
     housePrice: cost,
     newBalance: playerState.balance
   };
+}
+
+/**
+ * Kendi mülkleri arasında hammadde/ürün aktarımı (Self-Trade)
+ */
+export function useSelfResource(socketId, itemType) {
+  const room = getRoomBySocketId(socketId);
+  if (!room || !room.isStarted || !room.gameState) {
+    return { success: false, error: 'Oyun aktif değil.' };
+  }
+
+  const playerState = room.gameState.playersState[socketId];
+  if (!playerState) {
+    return { success: false, error: 'Oyuncu bulunamadı.' };
+  }
+
+  if (!room.gameState.tradeState) room.gameState.tradeState = {};
+
+  if (itemType === 'rawMaterial') {
+    if (room.gameState.propertyOwnership[15]?.ownerId !== socketId) return { success: false, error: 'Hammadde Tesisi sizin değil!' };
+    if (room.gameState.propertyOwnership[24]?.ownerId !== socketId) return { success: false, error: 'Fabrika sizin değil!' };
+    
+    if (!room.gameState.tradeState[15] || room.gameState.tradeState[15].stock < 1) {
+      return { success: false, error: 'Yeterli hammadde stoğu yok.' };
+    }
+
+    room.gameState.tradeState[15].stock -= 1;
+    if (!room.gameState.tradeState[24]) room.gameState.tradeState[24] = { rawMaterial: 0, productStock: 0 };
+    room.gameState.tradeState[24].rawMaterial += 1;
+    
+    return { success: true, room, playerName: room.players.find(p => p.id === socketId)?.name };
+
+  } else if (itemType === 'product') {
+    if (room.gameState.propertyOwnership[24]?.ownerId !== socketId) return { success: false, error: 'Fabrika sizin değil!' };
+    if (room.gameState.propertyOwnership[35]?.ownerId !== socketId) return { success: false, error: 'AVM sizin değil!' };
+
+    if (!room.gameState.tradeState[24] || room.gameState.tradeState[24].productStock < 1) {
+      return { success: false, error: 'Yeterli ürün stoğu yok.' };
+    }
+
+    room.gameState.tradeState[24].productStock -= 1;
+    if (!room.gameState.tradeState[35]) room.gameState.tradeState[35] = { productStock: 0, activeStockTurns: 0 };
+    room.gameState.tradeState[35].productStock += 1;
+
+    return { success: true, room, playerName: room.players.find(p => p.id === socketId)?.name };
+  }
+
+  return { success: false, error: 'Geçersiz işlem tipi.' };
 }
 
 /**
@@ -1532,6 +1628,13 @@ export function jailAction(socketId, action) {
       return { success: false, error: `Kefalet bedelini (Net Varlık %5 = ${bailAmount.toLocaleString('tr-TR')} ₺) ödeyecek kadar nakit bakiyeniz yok.` };
     }
     playerState.balance -= bailAmount;
+    
+    const fundOwnerId = room.gameState.propertyOwnership?.[37]?.ownerId;
+    if (fundOwnerId && room.gameState.playersState[fundOwnerId]) {
+      room.gameState.playersState[fundOwnerId].balance += bailAmount;
+    } else {
+      room.gameState.wealthFundPool = (room.gameState.wealthFundPool || 0) + bailAmount;
+    }
     room.gameState.jailState[socketId] = { inJail: false, turnsServed: 0 };
     calculatePlayerTotalAssetValue(room, socketId);
     return {

@@ -521,15 +521,24 @@ export const useGameStore = create((set, get) => ({
       }
     });
 
+    socket.on('server:portLeaseWon', ({ winnerId, winnerName, bid, leaseTurns }) => {
+      set({ activeAuction: null, auctionCountdown: null, isAuctionModalMinimized: false });
+    });
+
+    socket.on('server:fundLeaseWon', ({ winnerId, winnerName, bid, leaseTurns, poolAmount }) => {
+      set({ activeAuction: null, auctionCountdown: null, isAuctionModalMinimized: false });
+    });
+
     // --- FAZ 6: ŞANS KARTLARI VE GAZETE MANŞETİ DİNLEYİCİLERİ ---
     socket.on('server:showChanceCard', ({ playerId, playerName, card }) => {
-      set({ activeChanceCard: { ...card, drawerId: playerId, drawerName: playerName } });
-      get().addLog(`🃏 ${playerName} Fırsat/Şans karesine geldi ve kart çekti: "${card.title}"`, 'warning');
       const myId = get().myId;
       if (playerId === myId) {
+        set({ activeChanceCard: { ...card, drawerId: playerId, drawerName: playerName } });
+        get().addLog(`🃏 Şans karesine geldiniz ve kart çektiniz: "${card.title}"`, 'warning');
         get().showToast(`🎰 Şans Kartı çektiniz: ${card.title}`, 'info', 5000);
       } else {
-        get().showToast(`🎰 ${playerName} Şans Kartı çekti: ${card.title}`, 'info', 5000);
+        get().addLog(`🃏 ${playerName} gizemli bir Şans Kartı çekti! Acaba ne çıkacak?`, 'warning');
+        get().showToast(`🎰 ${playerName} Şans Kartı çekti!`, 'info', 5000);
       }
     });
 
@@ -736,6 +745,18 @@ export const useGameStore = create((set, get) => ({
   },
 
   // --- FAZ 4 ACTION METOTLARI ---
+
+  useSelfResource: (itemType) => {
+    set({ loading: true });
+    socket.emit('client:useSelfResource', { itemType }, (res) => {
+      set({ loading: false });
+      if (res && res.success) {
+        get().showToast(itemType === 'rawMaterial' ? 'Öz Kaynak: Hammadde fabrikanıza eklendi!' : 'Öz Kaynak: Ürün AVM vitrinine dizildi!', 'success');
+      } else if (res && !res.success) {
+        get().showToast(res.error || 'Öz kaynak kullanılamadı.', 'error');
+      }
+    });
+  },
 
   sendTradeOffer: (toId, itemType, price) => {
     set({ loading: true });

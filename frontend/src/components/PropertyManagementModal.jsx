@@ -57,8 +57,8 @@ export default function PropertyManagementModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/80 backdrop-blur-md animate-fade-in">
-      <div className="w-full max-w-md border rounded-3xl overflow-hidden flex flex-col relative bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white shadow-xl dark:shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+      <div className={`w-full max-w-md border rounded-3xl overflow-hidden flex flex-col relative shadow-2xl ${isLight ? 'bg-white/80 border-neutral-200/50' : 'bg-neutral-950/80 border-white/10'} backdrop-blur-xl text-neutral-900 dark:text-white`}>
         
         {/* Üst Renk Vurgu Şeridi */}
         <div 

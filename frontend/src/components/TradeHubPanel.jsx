@@ -10,6 +10,7 @@ export default function TradeHubPanel() {
   const tradeWithState = useGameStore(state => state.tradeWithState);
   const processMaterial = useGameStore(state => state.processMaterial);
   const stockMall = useGameStore(state => state.stockMall);
+  const useSelfResource = useGameStore(state => state.useSelfResource);
   const loading = useGameStore(state => state.loading);
   const theme = useGameStore(state => state.theme);
   const myId = useGameStore(state => state.myId) || socket?.id;
@@ -63,10 +64,10 @@ export default function TradeHubPanel() {
     );
   }
 
-  // Fabrika (ID 24) Sahiplerini Bul (kendimiz haricinde)
-  const factoryOwners = players.filter(p => gameState.propertyOwnership?.[24]?.ownerId === p.id && p.id !== myId);
-  // AVM (ID 35) Sahiplerini Bul
-  const mallOwners = players.filter(p => gameState.propertyOwnership?.[35]?.ownerId === p.id && p.id !== myId);
+  // Fabrika (ID 24) Sahiplerini Bul (Kendimiz dahil)
+  const factoryOwners = players.filter(p => gameState.propertyOwnership?.[24]?.ownerId === p.id);
+  // AVM (ID 35) Sahiplerini Bul (Kendimiz dahil)
+  const mallOwners = players.filter(p => gameState.propertyOwnership?.[35]?.ownerId === p.id);
 
   return (
     <div className="w-full border rounded-3xl p-6 space-y-6 bg-white dark:bg-[#1c1c1e] border-amber-400 dark:border-amber-500/30 text-neutral-900 dark:text-white shadow-md dark:shadow-[0_0_35px_rgba(245,158,11,0.12)]">
@@ -150,29 +151,41 @@ export default function TradeHubPanel() {
                   >
                     <option value="">Fabrika Sahibi Seçin...</option>
                     {factoryOwners.map(o => (
-                      <option key={o.id} value={o.id}>{o.name} (Fabrikacı)</option>
+                      <option key={o.id} value={o.id}>
+                        {o.id === myId ? 'Kendin (Öz Kaynak)' : `${o.name} (Fabrikacı)`}
+                      </option>
                     ))}
                   </select>
 
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number"
-                      value={rawPriceInput}
-                      onChange={e => setRawPriceInput(e.target.value)}
-                      placeholder="Fiyat ₺"
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded-lg p-2 text-xs text-neutral-900 dark:text-white font-mono focus:outline-none focus:border-yellow-500"
-                    />
+                  {selectedFactoryOwner === myId ? (
                     <button
-                      onClick={() => {
-                        if (!selectedFactoryOwner) return;
-                        sendTradeOffer(selectedFactoryOwner, 'rawMaterial', Number(rawPriceInput) || 35000);
-                      }}
-                      disabled={loading || !selectedFactoryOwner || (tradeState[15]?.stock || 0) < 1}
-                      className="px-3 py-2 bg-yellow-500 hover:bg-yellow-400 text-gray-950 font-bold rounded-lg text-xs font-mono shrink-0 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      onClick={() => useSelfResource('rawMaterial')}
+                      disabled={loading || (tradeState[15]?.stock || 0) < 1}
+                      className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs font-mono shrink-0 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      TEKLİF ET
+                      ÖZ KAYNAĞI KULLAN
                     </button>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        value={rawPriceInput}
+                        onChange={e => setRawPriceInput(e.target.value)}
+                        placeholder="Fiyat ₺"
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded-lg p-2 text-xs text-neutral-900 dark:text-white font-mono focus:outline-none focus:border-yellow-500"
+                      />
+                      <button
+                        onClick={() => {
+                          if (!selectedFactoryOwner) return;
+                          sendTradeOffer(selectedFactoryOwner, 'rawMaterial', Number(rawPriceInput) || 35000);
+                        }}
+                        disabled={loading || !selectedFactoryOwner || (tradeState[15]?.stock || 0) < 1}
+                        className="px-3 py-2 bg-yellow-500 hover:bg-yellow-400 text-gray-950 font-bold rounded-lg text-xs font-mono shrink-0 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        TEKLİF ET
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -267,29 +280,41 @@ export default function TradeHubPanel() {
                   >
                     <option value="">AVM Sahibi Seçin...</option>
                     {mallOwners.map(o => (
-                      <option key={o.id} value={o.id}>{o.name} (AVM'ci)</option>
+                      <option key={o.id} value={o.id}>
+                        {o.id === myId ? 'Kendin (Öz Kaynak)' : `${o.name} (AVM'ci)`}
+                      </option>
                     ))}
                   </select>
 
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="number"
-                      value={productPriceInput}
-                      onChange={e => setProductPriceInput(e.target.value)}
-                      placeholder="Fiyat ₺"
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded-lg p-2 text-xs text-neutral-900 dark:text-white font-mono focus:outline-none focus:border-cyan-500"
-                    />
+                  {selectedMallOwner === myId ? (
                     <button
-                      onClick={() => {
-                        if (!selectedMallOwner) return;
-                        sendTradeOffer(selectedMallOwner, 'product', Number(productPriceInput) || 90000);
-                      }}
-                      disabled={loading || !selectedMallOwner || (tradeState[24]?.productStock || 0) < 1}
-                      className="px-3 py-2 bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-bold rounded-lg text-xs font-mono shrink-0 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      onClick={() => useSelfResource('product')}
+                      disabled={loading || (tradeState[24]?.productStock || 0) < 1}
+                      className="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs font-mono shrink-0 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      TEKLİF ET
+                      ÖZ KAYNAĞI KULLAN
                     </button>
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        value={productPriceInput}
+                        onChange={e => setProductPriceInput(e.target.value)}
+                        placeholder="Fiyat ₺"
+                        className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 rounded-lg p-2 text-xs text-neutral-900 dark:text-white font-mono focus:outline-none focus:border-cyan-500"
+                      />
+                      <button
+                        onClick={() => {
+                          if (!selectedMallOwner) return;
+                          sendTradeOffer(selectedMallOwner, 'product', Number(productPriceInput) || 90000);
+                        }}
+                        disabled={loading || !selectedMallOwner || (tradeState[24]?.productStock || 0) < 1}
+                        className="px-3 py-2 bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-bold rounded-lg text-xs font-mono shrink-0 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        TEKLİF ET
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

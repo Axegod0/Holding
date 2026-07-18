@@ -9,6 +9,7 @@ import {
   declineProperty,
   buildHouse,
   sendTradeOffer,
+  useSelfResource,
   respondTradeOffer,
   tradeWithState,
   processMaterial,
@@ -374,6 +375,37 @@ export function registerRoomHandlers(io, socket) {
   });
 
   /**
+   * client:useSelfResource - Kendi işletmeleri arası anında kaynak aktarımı
+   */
+  socket.on('client:useSelfResource', ({ itemType }, callback = () => {}) => {
+    const result = useSelfResource(socket.id, itemType);
+
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+
+    const { room, playerName } = result;
+    
+    // İşlem başarılıysa log yayınla
+    const actionText = itemType === 'rawMaterial' 
+      ? 'Hammadde Tesisindeki stoğunu Fabrikasına aktardı.'
+      : 'Fabrikasındaki ürünü AVM vitrinine dizdi.';
+
+    console.log(`[Öz Kaynak Aktarımı]: ${room.code} - ${playerName} -> ${itemType}`);
+
+    io.to(room.code).emit('server:log', {
+      time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+      text: `${playerName}, öz kaynaklarını kullanarak ${actionText}`,
+      type: 'info',
+      id: Date.now().toString()
+    });
+
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    callback({ success: true, result });
+  });
+
+  /**
    * client:sendTradeOffer - Faz 4: İşletmeler arası ticaret (hammadde/ürün) teklifi
    */
   socket.on('client:sendTradeOffer', ({ toId, itemType, price }, callback = () => {}) => {
@@ -702,6 +734,105 @@ export function registerRoomHandlers(io, socket) {
     Object.defineProperty(portAuction, 'timerId', { value: timer, writable: true, enumerable: false, configurable: true });
 
     io.to(room.code).emit('server:auctionStarted', { auction: portAuction });
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    callback({ success: true });
+  });
+
+  /**
+   * client:startFundLeaseAuction - Türkiye Varlık Fonu (#37) 5 Turluk İşletme İhalesi
+   */
+  socket.on('client:startFundLeaseAuction', (callback = () => {}) => {
+    const room = getRoomBySocketId(socket.id);
+    if (!room || !room.isStarted || !room.gameState) {
+      socket.emit('server:error', { message: 'Oyun aktif değil.' });
+      return callback({ success: false });
+    }
+    if (!room.gameState.waitingForFundLease) {
+      socket.emit('server:error', { message: 'Varlık Fonu işletme ihalesi için uygun durum yok.' });
+      return callback({ success: false });
+    }
+
+    const isDouble = room.gameState.waitingForFundLease.isDouble;
+    room.gameState.waitingForFundLease = null;
+
+    const fundAuction = {
+      id: 'fund_' + Date.now().toString(),
+      propertyId: 37,
+      propertyName: 'Türkiye Varlık Fonu (5 Turluk İşletme)',
+      sellerId: null,
+      sellerName: 'Devlet Hazinesi',
+      startingPrice: 50000,
+      currentBid: 50000,
+      highestBidderId: null,
+      highestBidderName: null,
+      timeLeft: 30,
+      isFundLease: true,
+      leaseTurns: 5
+    };
+
+    room.gameState.activeAuction = fundAuction;
+
+    const timer = setInterval(() => {
+      if (!room.gameState || !room.gameState.activeAuction || room.gameState.activeAuction.id !== fundAuction.id) {
+        clearInterval(timer);
+        return;
+      }
+      fundAuction.timeLeft -= 1;
+      io.to(room.code).emit('server:auctionTick', {
+        timeLeft: fundAuction.timeLeft,
+        currentBid: fundAuction.currentBid,
+        highestBidderId: fundAuction.highestBidderId,
+        highestBidderName: fundAuction.highestBidderName,
+        propertyName: fundAuction.propertyName,
+        propertyId: fundAuction.propertyId,
+        sellerId: fundAuction.sellerId
+      });
+      if (fundAuction.timeLeft <= 0) {
+        clearInterval(timer);
+        room.gameState.activeAuction = null;
+        if (fundAuction.highestBidderId && room.gameState.playersState[fundAuction.highestBidderId]) {
+          const winner = room.gameState.playersState[fundAuction.highestBidderId];
+          winner.balance -= fundAuction.currentBid;
+          
+          // Mevcut havuzdaki parayı kazanana ver ve havuzu sıfırla
+          const poolAmount = room.gameState.wealthFundPool || 0;
+          winner.balance += poolAmount;
+          room.gameState.wealthFundPool = 0;
+
+          room.gameState.propertyOwnership[37] = {
+            ownerId: fundAuction.highestBidderId,
+            houses: 0,
+            isMortgaged: false,
+            isLease: true,
+            leaseExpiresTurn: (room.gameState.totalTurnsCompleted || 0) + 5
+          };
+          
+          io.to(room.code).emit('server:fundLeaseWon', {
+            winnerId: fundAuction.highestBidderId,
+            winnerName: fundAuction.highestBidderName,
+            bid: fundAuction.currentBid,
+            leaseTurns: 5,
+            poolAmount
+          });
+          io.to(room.code).emit('server:logMessage', {
+            message: `🇹🇷 VARLIK FONU İHALESİ SONUÇLANDI! ${fundAuction.highestBidderName}, fonu ${fundAuction.currentBid.toLocaleString('tr-TR')} ₺ bedelle 5 tur işletme hakkı kazandı ve kasadaki ${poolAmount.toLocaleString('tr-TR')} ₺ anında hesabına aktarıldı!`,
+            type: 'success'
+          });
+        } else {
+          io.to(room.code).emit('server:fundLeaseWon', { winnerId: null, winnerName: 'Teklif Gelmedi', bid: 0, leaseTurns: 0, poolAmount: 0 });
+        }
+        io.to(room.code).emit('server:turnUpdated', {
+          currentTurnIndex: room.gameState.currentTurnIndex,
+          activePlayerId: room.players[room.gameState.currentTurnIndex]?.id,
+          isDouble
+        });
+        io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+      }
+    }, 1000);
+
+    Object.defineProperty(fundAuction, 'timerId', { value: timer, writable: true, enumerable: false, configurable: true });
+
+    io.to(room.code).emit('server:auctionStarted', { auction: fundAuction });
     io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
     callback({ success: true });
   });

@@ -19,11 +19,14 @@ import SwapPanel from './SwapPanel.jsx';
 import FinancialModal from './FinancialModal.jsx';
 import ChanceCardModal from './ChanceCardModal.jsx';
 import BorsaInvestmentModal from './BorsaInvestmentModal.jsx';
+import ActiveTurnModal from './ActiveTurnModal.jsx';
+import BorsaModal from './BorsaModal.jsx';
 import DiceRollerAnimation from './DiceRollerAnimation.jsx';
 import NewsFlashModal from './NewsFlashModal.jsx';
 import JailAlertModal from './JailAlertModal.jsx';
 import PropertyManagementModal from './PropertyManagementModal.jsx';
 import PortLeaseModal from './PortLeaseModal.jsx';
+import PropertyDetailModal from './PropertyDetailModal.jsx';
 
 export default function GameBoard() {
   const myId = useGameStore(state => state.myId || socket?.id);
@@ -34,6 +37,7 @@ export default function GameBoard() {
   const rollDice = useGameStore(state => state.rollDice);
   const loading = useGameStore(state => state.loading);
   const lastDiceRoll = useGameStore(state => state.lastDiceRoll);
+  const [selectedPropertyId, setSelectedPropertyId] = useState(null);
 
   const theme = useGameStore(state => state.theme);
   const toggleTheme = useGameStore(state => state.toggleTheme);
@@ -158,6 +162,14 @@ export default function GameBoard() {
       <SwapOfferModal />
       <PortLeaseModal />
 
+      {/* Property Detail Modal */}
+      {selectedPropertyId !== null && (
+        <PropertyDetailModal 
+          propertyId={selectedPropertyId} 
+          onClose={() => setSelectedPropertyId(null)} 
+        />
+      )}
+
       {/* 14x8 DİKDÖRTGEN TAHTA (Ekranın Tamamına Fit Olur, Mobil/Küçük Ekranlarda Kaydırılabilir Kesintisiz Oyun Deneyimi Sunar) */}
       <div 
         className="min-w-[1020px] min-h-[620px] lg:min-w-0 lg:min-h-0 w-full h-full rounded-3xl border border-neutral-300 dark:border-neutral-800 p-1.5 sm:p-2 transition-all relative bg-neutral-100 dark:bg-[#0a0a0a]"
@@ -185,7 +197,8 @@ export default function GameBoard() {
               key={square.id}
               onClick={() => {
                 if (square.id === 20 || square.type === 'bank') setActiveBankModal(true);
-                if (square.id === 13 || square.type === 'jail') setActiveJailModal(true);
+                else if (square.id === 13 || square.type === 'jail') setActiveJailModal(true);
+                else setSelectedPropertyId(square.id);
               }}
               style={{
                 gridColumnStart: coords.gridColumnStart,
@@ -216,28 +229,11 @@ export default function GameBoard() {
                 />
               )}
 
-              {/* Üst Kısım: ID ve Tapu/Otel Rozeti */}
-              <div className="relative z-10">
-                <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-mono pt-0.5 text-neutral-500 dark:text-neutral-400 pl-3">
-                  <span className="font-bold text-neutral-900 dark:text-neutral-100">#{square.id}</span>
-                  {getSquareIcon(square.type)}
-                </div>
-
+              {/* Üst Kısım: ID ve Renk Sahibi */}
+              <div className="relative z-10 flex items-center justify-between text-[9px] sm:text-[10px] font-mono pt-0.5 text-neutral-500 dark:text-neutral-400 pl-3">
+                <span className="font-bold text-neutral-900 dark:text-neutral-100">#{square.id}</span>
                 {ownerPlayer && (
-                  <div className={`my-0.5 flex items-center justify-between gap-1 px-1 py-0.2 rounded border text-[8px] font-mono font-bold ${
-                    ownership.isMortgaged
-                      ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400'
-                      : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300'
-                  }`}>
-                    <span className="truncate max-w-[42px]" style={{ color: ownership.isMortgaged ? '#FCA5A5' : (ownerPlayer.color?.hex || '#60A5FA') }}>
-                      {ownership.isMortgaged ? '🔒 İPOTEK' : `👑 ${ownerPlayer.name}`}
-                    </span>
-                    {ownership.isMortgaged ? null : houseCount === 5 ? (
-                      <span className="text-amber-400">⭐️</span>
-                    ) : houseCount > 0 ? (
-                      <span className="text-emerald-400">🏠x{houseCount}</span>
-                    ) : null}
-                  </div>
+                  <div className={`w-2 h-2 rounded-full shadow-sm ${ownership.isMortgaged ? 'bg-red-500 animate-pulse' : ''}`} style={{ backgroundColor: ownership.isMortgaged ? undefined : ownerPlayer.color?.hex }} title={ownerPlayer.name} />
                 )}
               </div>
 

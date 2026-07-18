@@ -231,10 +231,10 @@ export const BOARD_DATA = [
 
   // ───────────────── SAĞ KENAR (Yukarı → Aşağı): 33 → 39 ─────────────────
   {
-    id: 33, type: 'gotojail',
-    name: 'Gümrük Kapısı — Soruşturma',
-    subtitle: 'Anında Hapse Git!',
-    color: '#DC2626'
+    id: 33, type: 'CASINO',
+    name: 'Yeraltı Kumarhanesi',
+    subtitle: 'Blackjack Masası',
+    color: '#10B981'
   },
   {
     id: 34, type: 'chance',
@@ -253,16 +253,17 @@ export const BOARD_DATA = [
     color: '#EF4444'
   },
   {
-    id: 37, type: 'property',
+    id: 37, type: 'WEALTH_FUND',
+    name: 'Türkiye Varlık Fonu',
+    subtitle: 'Devlet Kasası İhalesi',
+    color: '#8B5CF6'
+  },
+  {
+    id: 38, type: 'property',
     name: 'Ankara', group: 'group8',
     price: 350000, housePrice: 200000,
     rent: [35000, 70000, 175000, 500000, 1100000, 1300000, 1500000],
     color: '#3B82F6'
-  },
-  {
-    id: 38, type: 'chance',
-    name: 'Şans Kartı', subtitle: 'Piyasa Haberi',
-    color: '#F59E0B'
   },
   {
     id: 39, type: 'property',
