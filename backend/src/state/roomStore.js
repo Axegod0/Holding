@@ -2706,3 +2706,53 @@ export function submitBorsaInvestment(socketId, amount) {
     activePlayerId: nextActivePlayerId 
   };
 }
+
+export function playCasinoAction(socketId, betAmount, result) {
+  const room = getRoomBySocketId(socketId);
+  if (!room || !room.gameState || !room.gameState.waitingForCasino) {
+    return { success: false, error: 'Oyun aktif değil veya Casino için beklenmiyor.' };
+  }
+  
+  if (room.gameState.waitingForCasino.playerId !== socketId) {
+    return { success: false, error: 'Casino işlemi için yetkiniz yok.' };
+  }
+  
+  const playerState = room.gameState.playersState[socketId];
+  if (!playerState) {
+    return { success: false, error: 'Oyuncu bulunamadı.' };
+  }
+  
+  const isDouble = room.gameState.waitingForCasino.isDouble;
+  room.gameState.waitingForCasino = null;
+  
+  let resultMessage = '';
+  if (result === 'win') {
+    playerState.balance += betAmount;
+    resultMessage = `🎰 YERALTI KUMARHANESİ: Oyuncu Blackjack'te KAZANDI ve ${betAmount.toLocaleString('tr-TR')} ₺ elde etti!`;
+  } else if (result === 'lose') {
+    playerState.balance -= betAmount;
+    resultMessage = `🎰 YERALTI KUMARHANESİ: Oyuncu Blackjack'te KAYBETTİ ve ${betAmount.toLocaleString('tr-TR')} ₺ masada kaldı!`;
+  } else {
+    // draw
+    resultMessage = `🎰 YERALTI KUMARHANESİ: Blackjack BERABERE! Oyuncu yatırdığı parayı geri aldı.`;
+  }
+  
+  if (room.ioInstance) {
+    room.ioInstance.to(room.code).emit('server:logMessage', {
+      message: resultMessage,
+      type: result === 'win' ? 'success' : (result === 'lose' ? 'error' : 'info')
+    });
+  }
+  
+  advanceToNextTurn(room, isDouble);
+  const nextActivePlayerId = room.players[room.gameState.currentTurnIndex]?.id;
+  
+  return {
+    success: true,
+    room,
+    playerId: socketId,
+    newBalance: playerState.balance,
+    currentTurnIndex: room.gameState.currentTurnIndex,
+    activePlayerId: nextActivePlayerId
+  };
+}
