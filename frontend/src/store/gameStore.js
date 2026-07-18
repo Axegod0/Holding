@@ -201,6 +201,16 @@ export const useGameStore = create((set, get) => ({
         movingTokenTarget: willMove ? { playerId, targetPosition: newPosition } : null
       });
 
+      // Zar animasyonu 600ms'de bittiğinde piyonun hemen hareket etmesi için settled bayrağını ekle
+      setTimeout(() => {
+        set(state => {
+          if (state.activeDiceAnimation && state.activeDiceAnimation.playerId === playerId) {
+            return { activeDiceAnimation: { ...state.activeDiceAnimation, settled: true } };
+          }
+          return {};
+        });
+      }, 600);
+
       const targetSquare = BOARD_DATA.find(s => s.id === newPosition)?.name || `#${newPosition}`;
       get().addLog(
         `${playerName} zar attı: [🎲 ${dice[0]} + ${dice[1]}] = ${diceTotal}. Yeni Konum: ${targetSquare} (#${newPosition})${isDouble ? ' (ÇİFT ZAR!)' : ''}`,

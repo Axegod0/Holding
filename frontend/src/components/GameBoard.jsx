@@ -62,8 +62,8 @@ export default function GameBoard() {
         players.forEach(p => {
           let targetPos = gameState.playersState[p.id]?.position ?? 0;
           
-          // Eğer o oyuncu için zar animasyonu aktifse, henüz piyon hareket etmesin (eski konumda dursun)
-          if (activeDiceAnimation && activeDiceAnimation.rolling && activeDiceAnimation.playerId === p.id && activeDiceAnimation.oldPosition !== undefined) {
+          // Eğer o oyuncu için zar animasyonu aktifse ve henüz zarlar sabitlenmediyse, henüz piyon hareket etmesin (eski konumda dursun)
+          if (activeDiceAnimation && activeDiceAnimation.rolling && !activeDiceAnimation.settled && activeDiceAnimation.playerId === p.id && activeDiceAnimation.oldPosition !== undefined) {
             targetPos = activeDiceAnimation.oldPosition;
           }
 
