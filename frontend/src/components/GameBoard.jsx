@@ -27,6 +27,8 @@ import PortLeaseModal from './PortLeaseModal.jsx';
 import PropertyDetailModal from './PropertyDetailModal.jsx';
 import CasinoModal from './CasinoModal.jsx';
 import AdminPanel from './AdminPanel.jsx';
+import LogMonitor from './LogMonitor.jsx';
+import { getRingGridCoords } from '../utils/boardLayout.js';
 
 export default function GameBoard() {
   const myId = useGameStore(state => state.myId || socket?.id);
@@ -163,6 +165,7 @@ export default function GameBoard() {
       <PortLeaseModal />
       <CasinoModal />
       <AdminPanel />
+      <LogMonitor />
 
       {/* Property Detail Modal */}
       {selectedPropertyId !== null && (
@@ -227,10 +230,21 @@ export default function GameBoard() {
               {/* Üst Kısım: ID ve Renk Sahibi */}
               <div className="relative z-10 flex items-center justify-between text-[9px] sm:text-[10px] font-mono pt-1 px-1 text-neutral-500 dark:text-neutral-400">
                 <span className="font-bold text-neutral-900 dark:text-neutral-100">#{square.id}</span>
-                {ownerPlayer && (
-                  <div className={`w-2 h-2 rounded-full shadow-sm ${ownership.isMortgaged ? 'bg-red-500 animate-pulse' : ''}`} style={{ backgroundColor: ownership.isMortgaged ? undefined : ownerPlayer.color?.hex }} title={ownerPlayer.name} />
+                {ownerPlayer && ownership.isMortgaged && (
+                  <div className="w-2 h-2 rounded-full shadow-sm bg-red-500 animate-pulse" title="İpotekli" />
                 )}
               </div>
+
+              {/* Sahiplik Arka Plan Katmanı */}
+              {ownerPlayer && !ownership.isMortgaged && (
+                <div 
+                  className="absolute inset-0 z-0 pointer-events-none transition-colors duration-500"
+                  style={{
+                    backgroundColor: `${ownerPlayer.color?.hex}26`,
+                    boxShadow: `inset 0 0 15px ${ownerPlayer.color?.hex}33`
+                  }}
+                />
+              )}
 
               {/* Kare Adı (Ortada, bold, nötr renk) */}
               <div className="flex-1 flex flex-col items-center justify-center relative z-10 my-0.5 px-0.5">

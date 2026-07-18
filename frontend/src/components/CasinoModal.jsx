@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { PlaySquare, DollarSign, XCircle, Hand, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { PlaySquare, DollarSign, XCircle, Hand, AlertTriangle, Users } from 'lucide-react';
 import useGameStore from '../store/gameStore.js';
 import socket from '../services/socket.js';
 
@@ -36,22 +36,129 @@ export default function CasinoModal() {
   const gameState = useGameStore(state => state.gameState);
   const myId = useGameStore(state => state.myId || socket?.id);
   const theme = useGameStore(state => state.theme);
+  const players = useGameStore(state => state.players) || [];
   
   const waitingForCasino = gameState?.waitingForCasino;
-  const isMyTurn = waitingForCasino?.playerId === myId;
+  const casinoSession = gameState?.casinoSession;
   const myBalance = gameState?.playersState?.[myId]?.balance || 0;
+
+  const isHost = waitingForCasino?.playerId === myId || casinoSession?.hostId === myId;
+  const isJoined = casinoSession?.joinedPlayers?.includes(myId);
+  const hasFinished = casinoSession?.finishedPlayers?.includes(myId);
 
   const [phase, setPhase] = useState('bet'); // bet, play, result
   const [bet, setBet] = useState(10000);
   
   const [playerCards, setPlayerCards] = useState([]);
   const [dealerCards, setDealerCards] = useState([]);
-  const [gameResult, setGameResult] = useState(null); // win, lose, draw
+  const [gameResult, setGameResult] = useState(null);
 
-  // Modal sadece #33 karesine gelen kişi tarafından ve sıra onda iken görülür. (Diğerleri görebilir mi? Hayır, sadece oyuncuya özel açalım ya da izleyici modu ekleyelim. Şimdilik sadece aktif oyuncuya açalım)
-  if (!waitingForCasino || !isMyTurn) return null;
+  // Reset internal state when session ends or starts
+  useEffect(() => {
+    if (!casinoSession && !waitingForCasino) {
+      setPhase('bet');
+      setPlayerCards([]);
+      setDealerCards([]);
+      setGameResult(null);
+    }
+  }, [casinoSession, waitingForCasino]);
+
+  if (!waitingForCasino && !casinoSession) return null;
 
   const isLight = theme === 'light';
+  
+  // -- HOST LOBBY --
+  if (!casinoSession && isHost && waitingForCasino) {
+    return (
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+        <div className="bg-black/90 p-6 rounded-2xl border border-green-500/30 max-w-sm w-full text-center shadow-[0_0_40px_rgba(34,197,94,0.15)]">
+          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-yellow-500 mb-2">YERALTI KUMARHANESİ</h2>
+          <p className="text-neutral-300 text-sm mb-6">Şansını denemeden önce odaya davet gönderebilirsin. Sadece daveti kabul edenler oynayabilir.</p>
+          <div className="space-y-3">
+            <button 
+              onClick={() => socket.emit('client:sendCasinoInvite')}
+              className="w-full py-3 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg flex items-center justify-center gap-2"
+            >
+              <Users className="w-5 h-5" /> Herkese Davet Gönder
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // -- EVERYONE ELSE: INVITE POPUP --
+  if (casinoSession && casinoSession.status === 'lobby' && !isJoined) {
+    const hostName = players.find(p=>p.id === casinoSession.hostId)?.name || 'Kasa';
+    return (
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+        <div className="bg-black/90 p-6 rounded-2xl border border-green-500/30 max-w-sm w-full text-center shadow-[0_0_40px_rgba(34,197,94,0.15)]">
+          <h2 className="text-xl font-bold text-yellow-500 mb-2">KUMARHANE DAVETİ</h2>
+          <p className="text-white mb-6 font-medium"><strong>{hostName}</strong> seni yeraltı kumarhanesinde Blackjack oynamaya davet ediyor!</p>
+          <div className="flex gap-4">
+            <button onClick={() => socket.emit('client:acceptCasinoInvite')} className="flex-1 py-3 bg-green-500 hover:bg-green-600 text-black font-bold rounded-lg">Katıl</button>
+            <button onClick={() => {}} className="flex-1 py-3 bg-red-500/20 text-red-500 font-bold rounded-lg opacity-50 cursor-not-allowed text-sm">Reddet (İzleyici)</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // -- HOST WAITING IN LOBBY FOR OTHERS --
+  if (casinoSession && casinoSession.status === 'lobby' && isJoined) {
+    if (isHost) {
+      return (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="bg-black/90 p-6 rounded-2xl border border-green-500/30 max-w-sm w-full text-center shadow-[0_0_40px_rgba(34,197,94,0.15)]">
+            <h2 className="text-xl font-bold text-yellow-500 mb-4 animate-pulse">LOBİ BEKLENİYOR...</h2>
+            <div className="text-left text-sm text-neutral-300 mb-6 space-y-2 border border-white/10 rounded-xl p-4 bg-white/5">
+              <p className="text-neutral-500 font-mono mb-2 uppercase tracking-widest text-xs">Şu ana kadar katılanlar ({casinoSession.joinedPlayers.length}):</p>
+              {casinoSession.joinedPlayers.map(id => (
+                <div key={id} className="text-green-400 font-bold flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"/>
+                  {players.find(p=>p.id===id)?.name}
+                </div>
+              ))}
+            </div>
+            <button 
+              onClick={() => socket.emit('client:startCasinoGame')}
+              className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black rounded-lg shadow-lg uppercase tracking-wider"
+            >
+              Oyunu Başlat ({casinoSession.joinedPlayers.length} Oyuncu)
+            </button>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="bg-black/90 p-6 rounded-2xl border border-green-500/30 max-w-sm w-full text-center shadow-[0_0_40px_rgba(34,197,94,0.15)]">
+            <h2 className="text-xl font-bold text-yellow-500 mb-2 animate-pulse">LOBİ BEKLENİYOR...</h2>
+            <p className="text-neutral-300">Ev sahibi oyunu başlattığında Blackjack masasına alınacaksın.</p>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // If session is playing but user is not joined (e.g. they declined)
+  if (casinoSession && casinoSession.status === 'playing' && !isJoined) {
+    return null; // Don't show anything to people who didn't join
+  }
+
+  // -- GAME LOGIC BELOW (ONLY FOR JOINED PLAYERS) --
+  // Note: hasFinished means they submitted their result and are waiting for others.
+  if (hasFinished) {
+    return (
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+        <div className="bg-black/90 p-6 rounded-2xl border border-green-500/30 max-w-sm w-full text-center shadow-[0_0_40px_rgba(34,197,94,0.15)]">
+          <h2 className="text-xl font-bold text-yellow-500 mb-2 animate-pulse">SONUÇ BEKLENİYOR</h2>
+          <p className="text-neutral-300">Sen elini tamamladın. Diğer oyuncuların da bitirmesi bekleniyor...</p>
+        </div>
+      </div>
+    );
+  }
 
   const startGame = () => {
     if (bet > myBalance) return;
@@ -98,135 +205,123 @@ export default function CasinoModal() {
     }, 3000);
   };
 
-  const pScore = calculateScore(playerCards);
-  const dScore = calculateScore(dealerCards);
-
+  // REUSE THE SAME RENDER FROM PREVIOUS UI FOR BET/PLAY/RESULT
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-      <div className={`max-w-xl w-full p-6 sm:p-8 rounded-3xl border-4 shadow-2xl relative overflow-hidden font-mono ${
-        isLight ? 'bg-neutral-100 border-neutral-300' : 'bg-[#0a0a0a] border-neutral-800'
-      }`}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in zoom-in duration-300">
+      <div className="relative w-full max-w-xl overflow-hidden rounded-3xl bg-[#0a0a0a] border border-green-500/30 shadow-[0_0_50px_rgba(34,197,94,0.15)] flex flex-col items-center">
         
-        <div className="text-center mb-6">
-          <h2 className="text-3xl font-black text-emerald-500 mb-1 tracking-widest uppercase">YERALTI KUMARHANESİ</h2>
-          <p className="text-neutral-500 font-bold text-sm tracking-wider">BLACKJACK MASASI</p>
+        {/* Header */}
+        <div className="w-full bg-green-950/40 p-4 border-b border-green-500/30 flex items-center justify-center gap-3">
+          <PlaySquare className="w-6 h-6 text-green-500" />
+          <h2 className="text-xl font-black text-green-500 tracking-widest uppercase">Yeraltı Blackjack</h2>
         </div>
 
-        {phase === 'bet' && (
-          <div className="flex flex-col items-center gap-6">
-            <p className={`text-lg font-bold text-center ${isLight ? 'text-neutral-800' : 'text-neutral-200'}`}>
-              Ne kadar riske etmek istersin?
-            </p>
-            <div className="flex items-center gap-4 text-3xl font-black text-emerald-400">
-              <DollarSign className="w-8 h-8" />
-              <span>{bet.toLocaleString('tr-TR')} ₺</span>
-            </div>
-            <input 
-              type="range" 
-              min="10000" 
-              max={Math.max(10000, Math.min(500000, myBalance))} 
-              step="10000" 
-              value={bet}
-              onChange={(e) => setBet(Number(e.target.value))}
-              className="w-full accent-emerald-500 h-3 bg-neutral-800 rounded-lg appearance-none cursor-pointer"
-            />
-            <div className="flex gap-4 w-full mt-4">
-              <button 
-                onClick={startGame}
-                disabled={bet > myBalance || bet <= 0}
-                className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xl rounded-2xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                OYUNA BAŞLA
-              </button>
-              <button 
-                onClick={() => socket.emit('client:playCasino', { betAmount: 0, result: 'draw' })}
-                className="py-4 px-6 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold text-lg rounded-2xl transition-all"
-              >
-                MASADAN KALK
-              </button>
-            </div>
-            {bet > myBalance && (
-              <p className="text-red-500 font-bold text-sm">Yetersiz bakiye!</p>
-            )}
-          </div>
-        )}
-
-        {phase === 'play' && (
-          <div className="flex flex-col gap-8">
-            <div className="bg-neutral-900 p-4 rounded-2xl border border-neutral-700">
-              <h3 className="text-neutral-400 font-bold mb-3 text-center">KRUPİYE (Puan: {dScore})</h3>
-              <div className="flex justify-center gap-3">
-                {dealerCards.map((c, i) => (
-                  <div key={i} className={`w-16 h-24 bg-white rounded-xl border-2 border-neutral-300 flex flex-col items-center justify-center shadow-lg ${c.color}`}>
-                    <span className="text-xl font-black">{c.rank}</span>
-                    <span className="text-2xl">{c.suit}</span>
-                  </div>
-                ))}
-                <div className="w-16 h-24 bg-neutral-800 rounded-xl border-2 border-neutral-700 flex items-center justify-center opacity-50">
-                  <span className="text-neutral-600 text-2xl">?</span>
+        <div className="w-full p-6 sm:p-8 flex flex-col items-center min-h-[400px]">
+          {phase === 'bet' && (
+            <div className="w-full max-w-xs flex flex-col items-center animate-in slide-in-from-bottom-4">
+              <div className="mb-8 text-center">
+                <p className="text-neutral-400 font-mono mb-2 uppercase text-sm tracking-wider">Kasa Bakiyen</p>
+                <div className="text-3xl font-black text-emerald-400 font-mono bg-emerald-500/10 px-6 py-3 rounded-2xl border border-emerald-500/20 shadow-inner">
+                  {myBalance.toLocaleString('tr-TR')} ₺
                 </div>
               </div>
-            </div>
 
-            <div className="bg-neutral-900 p-4 rounded-2xl border border-emerald-900 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-              <h3 className="text-emerald-400 font-bold mb-3 text-center">SEN (Puan: {pScore})</h3>
-              <div className="flex justify-center gap-3 flex-wrap">
-                {playerCards.map((c, i) => (
-                  <div key={i} className={`w-16 h-24 bg-white rounded-xl border-2 border-neutral-300 flex flex-col items-center justify-center shadow-lg animate-in slide-in-from-bottom-5 ${c.color}`}>
-                    <span className="text-xl font-black">{c.rank}</span>
-                    <span className="text-2xl">{c.suit}</span>
-                  </div>
+              <div className="w-full space-y-4">
+                <p className="text-center text-sm text-neutral-500 font-bold uppercase tracking-widest">Bahis Miktarı Seç</p>
+                
+                {[10000, 25000, 50000, 100000].map(amount => (
+                  <button
+                    key={amount}
+                    onClick={() => setBet(amount)}
+                    className={`w-full py-3 rounded-xl font-bold font-mono text-lg transition-all border ${
+                      bet === amount 
+                        ? 'bg-green-500 text-black border-green-400 shadow-[0_0_20px_rgba(34,197,94,0.4)] scale-105' 
+                        : 'bg-white/5 text-neutral-300 border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    {amount.toLocaleString('tr-TR')} ₺
+                  </button>
                 ))}
               </div>
-            </div>
 
-            <div className="flex gap-4 mt-2">
-              <button 
-                onClick={hit}
-                className="flex-1 py-4 bg-amber-600 hover:bg-amber-500 text-white font-black text-xl rounded-2xl flex items-center justify-center gap-2 shadow-lg transition-all"
+              <button
+                onClick={startGame}
+                disabled={myBalance < bet}
+                className="mt-8 w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black rounded-2xl shadow-lg disabled:opacity-50 disabled:grayscale transition-all hover:scale-105 active:scale-95 uppercase tracking-widest text-lg"
               >
-                <Hand className="w-6 h-6" /> KART ÇEK (HIT)
-              </button>
-              <button 
-                onClick={stand}
-                className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xl rounded-2xl flex items-center justify-center gap-2 shadow-lg transition-all"
-              >
-                <PlaySquare className="w-6 h-6" /> BEKLE (STAND)
+                Oyunu Başlat
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        {phase === 'result' && (
-          <div className="flex flex-col items-center gap-6 animate-in zoom-in-95">
-            <div className={`p-6 rounded-3xl border-4 w-full text-center shadow-2xl ${
-              gameResult === 'win' ? 'bg-emerald-900/40 border-emerald-500 text-emerald-400' :
-              gameResult === 'lose' ? 'bg-red-900/40 border-red-500 text-red-400' :
-              'bg-amber-900/40 border-amber-500 text-amber-400'
-            }`}>
-              <h3 className="text-4xl font-black mb-2 uppercase">
-                {gameResult === 'win' ? 'KAZANDIN!' : gameResult === 'lose' ? 'KAYBETTİN!' : 'BERABERE!'}
-              </h3>
-              <p className="text-xl font-bold opacity-80">
-                {gameResult === 'win' ? `+${bet.toLocaleString('tr-TR')} ₺` : gameResult === 'lose' ? `-${bet.toLocaleString('tr-TR')} ₺` : 'Paranı Geri Aldın'}
-              </p>
-            </div>
-
-            <div className="flex w-full gap-4 opacity-80">
-              <div className="flex-1 bg-neutral-900 p-4 rounded-2xl border border-neutral-700 text-center">
-                <p className="text-neutral-500 text-sm mb-1">Krupiye</p>
-                <p className="text-2xl font-black text-white">{dScore}</p>
+          {(phase === 'play' || phase === 'result') && (
+            <div className="w-full flex flex-col items-center justify-between flex-1 animate-in zoom-in-95 duration-500">
+              
+              {/* DEALER AREA */}
+              <div className="w-full flex flex-col items-center mb-8">
+                <p className="text-neutral-500 font-mono text-xs uppercase tracking-widest mb-3 font-bold">Kruvazör / Kasa</p>
+                <div className="flex justify-center gap-2 sm:gap-4 flex-wrap">
+                  {dealerCards.map((c, i) => (
+                    <div key={i} className={`w-16 sm:w-20 h-24 sm:h-28 bg-white rounded-xl shadow-xl border border-neutral-200 flex flex-col items-center justify-center ${c.color} animate-in slide-in-from-top-4`}>
+                      <span className="text-xl sm:text-2xl font-bold">{c.rank}</span>
+                      <span className="text-2xl sm:text-3xl">{c.suit}</span>
+                    </div>
+                  ))}
+                  {phase === 'play' && (
+                    <div className="w-16 sm:w-20 h-24 sm:h-28 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#000_10px,#000_20px)] rounded-xl border border-neutral-800 opacity-20" />
+                  )}
+                </div>
+                {phase === 'result' && (
+                  <div className="mt-3 bg-black/50 px-3 py-1 rounded font-mono text-white text-sm font-bold border border-white/10">
+                    Skor: {calculateScore(dealerCards)}
+                  </div>
+                )}
               </div>
-              <div className="flex-1 bg-neutral-900 p-4 rounded-2xl border border-neutral-700 text-center">
-                <p className="text-neutral-500 text-sm mb-1">Sen</p>
-                <p className="text-2xl font-black text-white">{pScore}</p>
+
+              {/* RESULT OVERLAY */}
+              {phase === 'result' && (
+                <div className="my-4 animate-in zoom-in duration-500 drop-shadow-2xl z-10">
+                  {gameResult === 'win' && <div className="text-5xl font-black text-emerald-400 uppercase tracking-widest rotate-[-5deg]">KAZANDIN!</div>}
+                  {gameResult === 'lose' && <div className="text-5xl font-black text-red-500 uppercase tracking-widest rotate-[5deg]">KAYBETTİN</div>}
+                  {gameResult === 'draw' && <div className="text-4xl font-black text-yellow-500 uppercase tracking-widest">BERABERE</div>}
+                </div>
+              )}
+
+              {/* PLAYER AREA */}
+              <div className="w-full flex flex-col items-center mt-auto">
+                <div className="flex justify-center gap-2 sm:gap-4 flex-wrap mb-3">
+                  {playerCards.map((c, i) => (
+                    <div key={i} className={`w-16 sm:w-20 h-24 sm:h-28 bg-white rounded-xl shadow-xl border border-neutral-200 flex flex-col items-center justify-center ${c.color} animate-in slide-in-from-bottom-4`}>
+                      <span className="text-xl sm:text-2xl font-bold">{c.rank}</span>
+                      <span className="text-2xl sm:text-3xl">{c.suit}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-black/50 px-3 py-1 rounded font-mono text-white text-sm font-bold border border-white/10 mb-6">
+                  Senin Skorun: <span className={calculateScore(playerCards) > 21 ? 'text-red-500' : 'text-emerald-400'}>{calculateScore(playerCards)}</span>
+                </div>
+
+                {phase === 'play' && (
+                  <div className="flex gap-4 w-full max-w-xs">
+                    <button 
+                      onClick={hit}
+                      className="flex-1 py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-black rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 uppercase tracking-wider"
+                    >
+                      <Hand className="w-5 h-5" /> KART ÇEK
+                    </button>
+                    <button 
+                      onClick={stand}
+                      className="flex-1 py-4 bg-red-500 hover:bg-red-400 text-black font-black rounded-xl shadow-[0_0_20px_rgba(239,68,68,0.3)] transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 uppercase tracking-wider"
+                    >
+                      <XCircle className="w-5 h-5" /> DUR
+                    </button>
+                  </div>
+                )}
               </div>
+
             </div>
-
-            <p className="text-neutral-500 font-bold animate-pulse mt-4">Simülasyona dönülüyor...</p>
-          </div>
-        )}
-
+          )}
+        </div>
       </div>
     </div>
   );

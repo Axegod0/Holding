@@ -594,6 +594,44 @@ export function registerRoomHandlers(io, socket) {
     callback({ success: true, result });
   });
 
+  // MULTIPLAYER CASINO İŞLEMLERİ
+  socket.on('client:sendCasinoInvite', () => {
+    const room = getRoomBySocketId(socket.id);
+    if (!room || !room.gameState.waitingForCasino || room.gameState.waitingForCasino.playerId !== socket.id) return;
+    
+    room.gameState.casinoSession = {
+      hostId: socket.id,
+      status: 'lobby',
+      joinedPlayers: [socket.id],
+      finishedPlayers: [],
+      isDouble: room.gameState.waitingForCasino.isDouble
+    };
+    
+    const hostName = room.players.find(p => p.id === socket.id)?.name || 'Biri';
+    socket.broadcast.to(room.code).emit('server:casinoInvite', { hostId: socket.id, hostName });
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+  });
+
+  socket.on('client:acceptCasinoInvite', () => {
+    const room = getRoomBySocketId(socket.id);
+    if (!room || !room.gameState.casinoSession || room.gameState.casinoSession.status !== 'lobby') return;
+    
+    if (!room.gameState.casinoSession.joinedPlayers.includes(socket.id)) {
+      room.gameState.casinoSession.joinedPlayers.push(socket.id);
+      const playerName = room.players.find(p => p.id === socket.id)?.name || 'Oyuncu';
+      io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+      io.to(room.code).emit('server:logMessage', { message: `🎰 ${playerName} Kumarhane davetini kabul etti!`, type: 'info' });
+    }
+  });
+
+  socket.on('client:startCasinoGame', () => {
+    const room = getRoomBySocketId(socket.id);
+    if (!room || !room.gameState.casinoSession || room.gameState.casinoSession.hostId !== socket.id) return;
+    
+    room.gameState.casinoSession.status = 'playing';
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+  });
+
   // KUMARHANE OYNAMA İŞLEMİ (Kare 33)
   socket.on('client:playCasino', (data) => {
     const room = getRoomBySocketId(socket.id);
@@ -655,21 +693,26 @@ export function registerRoomHandlers(io, socket) {
       }
     } else if (data.action === 'adminTransferProperty') {
       const { propertyId, newOwnerId } = data;
-      if (room.gameState.propertyOwnership && room.gameState.propertyOwnership[propertyId]) {
-        if (newOwnerId === 'state') {
+      if (!room.gameState.propertyOwnership) room.gameState.propertyOwnership = {};
+      
+      if (newOwnerId === 'state') {
+        if (room.gameState.propertyOwnership[propertyId]) {
           delete room.gameState.propertyOwnership[propertyId];
-          io.to(room.code).emit('server:logMessage', {
-            message: `🚨 GÖLGE KABİNE: Bir mülke devlet tarafından kayyum atandı ve el konuldu!`,
-            type: 'warning'
-          });
-        } else {
-          room.gameState.propertyOwnership[propertyId].ownerId = newOwnerId;
-          room.gameState.propertyOwnership[propertyId].houses = 0;
-          io.to(room.code).emit('server:logMessage', {
-            message: `🚨 GÖLGE KABİNE: Bir mülkün tapusu zorla devredildi!`,
-            type: 'warning'
-          });
         }
+        io.to(room.code).emit('server:logMessage', {
+          message: `🚨 GÖLGE KABİNE: Bir mülke devlet tarafından kayyum atandı ve el konuldu!`,
+          type: 'warning'
+        });
+      } else {
+        if (!room.gameState.propertyOwnership[propertyId]) {
+          room.gameState.propertyOwnership[propertyId] = { houses: 0, isMortgaged: false };
+        }
+        room.gameState.propertyOwnership[propertyId].ownerId = newOwnerId;
+        room.gameState.propertyOwnership[propertyId].houses = 0;
+        io.to(room.code).emit('server:logMessage', {
+          message: `🚨 GÖLGE KABİNE: Bir mülkün tapusu zorla devredildi!`,
+          type: 'warning'
+        });
       }
     } else if (data.action === 'adminForceChanceCard') {
       const { targetId, cardId } = data;

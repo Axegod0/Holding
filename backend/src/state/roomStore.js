@@ -2775,32 +2775,23 @@ export function submitBorsaInvestment(socketId, amount) {
 
 export function playCasinoAction(socketId, betAmount, result) {
   const room = getRoomBySocketId(socketId);
-  if (!room || !room.gameState || !room.gameState.waitingForCasino) {
-    return { success: false, error: 'Oyun aktif değil veya Casino için beklenmiyor.' };
-  }
-  
-  if (room.gameState.waitingForCasino.playerId !== socketId) {
-    return { success: false, error: 'Casino işlemi için yetkiniz yok.' };
-  }
+  if (!room || !room.gameState) return { success: false, error: 'Oyun bulunamadı.' };
   
   const playerState = room.gameState.playersState[socketId];
-  if (!playerState) {
-    return { success: false, error: 'Oyuncu bulunamadı.' };
-  }
-  
-  const isDouble = room.gameState.waitingForCasino.isDouble;
-  room.gameState.waitingForCasino = null;
+  if (!playerState) return { success: false, error: 'Oyuncu bulunamadı.' };
   
   let resultMessage = '';
+  const playerName = room.players.find(p => p.id === socketId)?.name || 'Oyuncu';
+  
   if (result === 'win') {
     playerState.balance += betAmount;
-    resultMessage = `🎰 YERALTI KUMARHANESİ: Oyuncu Blackjack'te KAZANDI ve ${betAmount.toLocaleString('tr-TR')} ₺ elde etti!`;
+    resultMessage = `🎰 YERALTI KUMARHANESİ: ${playerName} KAZANDI ve ${betAmount.toLocaleString('tr-TR')} ₺ elde etti!`;
   } else if (result === 'lose') {
     playerState.balance -= betAmount;
-    resultMessage = `🎰 YERALTI KUMARHANESİ: Oyuncu Blackjack'te KAYBETTİ ve ${betAmount.toLocaleString('tr-TR')} ₺ masada kaldı!`;
+    resultMessage = `🎰 YERALTI KUMARHANESİ: ${playerName} KAYBETTİ ve ${betAmount.toLocaleString('tr-TR')} ₺ masada kaldı!`;
   } else {
     // draw
-    resultMessage = `🎰 YERALTI KUMARHANESİ: Blackjack BERABERE! Oyuncu yatırdığı parayı geri aldı.`;
+    resultMessage = `🎰 YERALTI KUMARHANESİ: ${playerName} BERABERE!`;
   }
   
   if (room.ioInstance) {
@@ -2810,15 +2801,41 @@ export function playCasinoAction(socketId, betAmount, result) {
     });
   }
   
-  advanceToNextTurn(room, isDouble);
-  const nextActivePlayerId = room.players[room.gameState.currentTurnIndex]?.id;
+  let currentTurnIndex = room.gameState.currentTurnIndex;
+  let activePlayerId = room.players[currentTurnIndex]?.id;
+
+  const session = room.gameState.casinoSession;
+  if (session) {
+    if (!session.finishedPlayers.includes(socketId)) {
+      session.finishedPlayers.push(socketId);
+    }
+    
+    // Check if everyone finished
+    if (session.finishedPlayers.length >= session.joinedPlayers.length) {
+      const isDouble = session.isDouble;
+      room.gameState.waitingForCasino = null;
+      room.gameState.casinoSession = null;
+      advanceToNextTurn(room, isDouble);
+      
+      currentTurnIndex = room.gameState.currentTurnIndex;
+      activePlayerId = room.players[currentTurnIndex]?.id;
+    }
+  } else if (room.gameState.waitingForCasino && room.gameState.waitingForCasino.playerId === socketId) {
+    // Fallback for single player if session missing
+    const isDouble = room.gameState.waitingForCasino.isDouble;
+    room.gameState.waitingForCasino = null;
+    advanceToNextTurn(room, isDouble);
+    
+    currentTurnIndex = room.gameState.currentTurnIndex;
+    activePlayerId = room.players[currentTurnIndex]?.id;
+  }
   
   return {
     success: true,
     room,
     playerId: socketId,
     newBalance: playerState.balance,
-    currentTurnIndex: room.gameState.currentTurnIndex,
-    activePlayerId: nextActivePlayerId
+    currentTurnIndex,
+    activePlayerId
   };
 }

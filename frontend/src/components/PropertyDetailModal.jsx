@@ -66,7 +66,7 @@ export default function PropertyDetailModal({ propertyId, onClose }) {
             <div>
               <p className={`text-xs uppercase tracking-wider font-bold ${textMuted} mb-1`}>Mülk Değeri</p>
               <div className={`text-2xl font-black font-mono text-emerald-500 dark:text-emerald-400`}>
-                {square.price ? `${square.price.toLocaleString('tr-TR')} ₺` : 'N/A'}
+                {square.price ? `${square.price.toLocaleString('tr-TR')} ₺` : 'İhale Usulü'}
               </div>
             </div>
             <div className="text-right">
@@ -83,7 +83,7 @@ export default function PropertyDetailModal({ propertyId, onClose }) {
           </div>
 
           {/* Kira Gelirleri (Sadece Arsalar İçin) */}
-          {square.rent && square.rent.length > 0 && (
+          {square.rent && square.rent.length > 0 && square.type === 'property' && (
             <div className={`rounded-xl p-4 border ${borderGlass} bg-black/5 dark:bg-white/5 shadow-inner`}>
               <h3 className={`text-xs uppercase font-bold text-center tracking-widest mb-3 ${textMuted}`}>Kira Getirisi Tablosu</h3>
               <div className="space-y-2 font-mono text-sm">
@@ -120,27 +120,34 @@ export default function PropertyDetailModal({ propertyId, onClose }) {
           )}
 
           {/* Liman, Kamu, Fabrika gibi diğer yapılar için özel gösterimler */}
-          {!square.rent && square.type === 'factory' && (
-            <div className={`rounded-xl p-4 border ${borderGlass} bg-black/5 dark:bg-white/5 text-center text-sm font-medium ${textMuted}`}>
-              Fabrikalar üretim gücü sağlar. Borsa çöküşlerinde ve ticaret mekaniklerinde kullanılır. Kira getirmez, stratejik varlıktır.
+          {square.type !== 'property' && (
+            <div className={`rounded-xl p-4 border ${borderGlass} bg-black/5 dark:bg-white/5 flex flex-col items-center text-center space-y-2`}>
+              <div className={`text-sm font-medium ${textMuted}`}>
+                Burası bir işletmedir.
+              </div>
+              <div className={`text-base font-bold ${ownerPlayer ? textMain : textMuted}`}>
+                {ownerPlayer ? `Sahibi: ${ownerPlayer.name}` : 'Şu an sahibi yok.'}
+              </div>
             </div>
           )}
 
           {/* Geliştirme Maliyeti & İpotek Bedeli */}
-          <div className="grid grid-cols-2 gap-3 mt-4">
-            <div className={`p-3 rounded-xl border ${borderGlass} bg-white/50 dark:bg-black/20 flex flex-col items-center justify-center text-center`}>
-              <span className={`text-[10px] uppercase font-bold ${textMuted} mb-1`}>İnşaat / Ev</span>
-              <span className={`font-mono font-black ${textMain}`}>
-                {square.housePrice ? `${square.housePrice.toLocaleString('tr-TR')} ₺` : '-'}
-              </span>
+          {square.type === 'property' && (
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className={`p-3 rounded-xl border ${borderGlass} bg-white/50 dark:bg-black/20 flex flex-col items-center justify-center text-center`}>
+                <span className={`text-[10px] uppercase font-bold ${textMuted} mb-1`}>İnşaat / Ev</span>
+                <span className={`font-mono font-black ${textMain}`}>
+                  {square.housePrice ? `${square.housePrice.toLocaleString('tr-TR')} ₺` : '-'}
+                </span>
+              </div>
+              <div className={`p-3 rounded-xl border ${borderGlass} bg-white/50 dark:bg-black/20 flex flex-col items-center justify-center text-center`}>
+                <span className={`text-[10px] uppercase font-bold ${textMuted} mb-1`}>İpotek Bedeli</span>
+                <span className="font-mono font-black text-amber-500">
+                  {square.price ? `${(square.price / 2).toLocaleString('tr-TR')} ₺` : '-'}
+                </span>
+              </div>
             </div>
-            <div className={`p-3 rounded-xl border ${borderGlass} bg-white/50 dark:bg-black/20 flex flex-col items-center justify-center text-center`}>
-              <span className={`text-[10px] uppercase font-bold ${textMuted} mb-1`}>İpotek Bedeli</span>
-              <span className="font-mono font-black text-amber-500">
-                {square.price ? `${(square.price / 2).toLocaleString('tr-TR')} ₺` : '-'}
-              </span>
-            </div>
-          </div>
+          )}
 
           {/* Mevcut Durum */}
           {ownership && (
