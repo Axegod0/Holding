@@ -28,7 +28,6 @@ import PropertyDetailModal from './PropertyDetailModal.jsx';
 import CasinoModal from './CasinoModal.jsx';
 import AdminPanel from './AdminPanel.jsx';
 import LogMonitor from './LogMonitor.jsx';
-import { getRingGridCoords } from '../utils/boardLayout.js';
 
 export default function GameBoard() {
   const myId = useGameStore(state => state.myId || socket?.id);
