@@ -160,11 +160,7 @@ export default function GameBoard() {
 
       {/* 14x8 DİKDÖRTGEN TAHTA (Ekranın Tamamına Fit Olur, Mobil/Küçük Ekranlarda Kaydırılabilir Kesintisiz Oyun Deneyimi Sunar) */}
       <div 
-        className={`min-w-[1020px] min-h-[620px] lg:min-w-0 lg:min-h-0 w-full h-full rounded-3xl border p-1.5 sm:p-2 transition-all relative ${
-          isLight 
-            ? 'bg-slate-200/95 border-slate-300 shadow-xl' 
-            : 'bg-[#1C2541]/90 border-[#3A506B] shadow-[0_0_40px_rgba(58,80,107,0.25)]'
-        }`}
+        className="min-w-[1020px] min-h-[620px] lg:min-w-0 lg:min-h-0 w-full h-full rounded-3xl border border-neutral-800 p-1.5 sm:p-2 transition-all relative bg-[#0a0a0a]"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(14, minmax(0, 1fr))',
@@ -195,34 +191,43 @@ export default function GameBoard() {
                 gridColumnStart: coords.gridColumnStart,
                 gridRowStart: coords.gridRowStart
               }}
-              className={`relative p-1 sm:p-1.5 rounded-xl border transition-all flex flex-col justify-between overflow-hidden ${
-                square.id === 20 || square.id === 13 || square.type === 'bank' || square.type === 'jail' ? 'cursor-pointer hover:border-emerald-400' : ''
+              className={`relative p-1 sm:p-1.5 rounded-xl border border-white/5 transition-all flex flex-col justify-between overflow-hidden shadow-lg shadow-black/50 bg-[#1c1c1e] ${
+                square.id === 20 || square.id === 13 || square.type === 'bank' || square.type === 'jail' ? 'cursor-pointer hover:border-neutral-700' : ''
               } ${
                 playersOnSquare.length > 0
-                  ? (isLight ? 'border-emerald-500 shadow-md bg-emerald-50 z-10' : 'border-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.3)] bg-[#243153] z-10')
+                  ? 'border-neutral-400 bg-[#262626] z-10'
                   : ownerPlayer
-                  ? (isLight ? 'border-blue-400 bg-blue-50/80' : 'border-[#60A5FA] bg-[#2E3C5D]/90')
-                  : (isLight ? 'border-slate-300 bg-white hover:border-slate-400 shadow-sm' : 'border-[#3A506B] bg-[#1C2541] hover:border-[#5BC0BE]')
-              } ${isCorner ? (isLight ? 'bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-50 border-amber-400 font-bold' : 'bg-gradient-to-br from-[#1C2541] via-[#243153] to-[#1C2541] border-[#FBBF24]/60 font-bold') : ''}`}
+                  ? 'border-neutral-700 bg-[#1c1c1e]'
+                  : 'hover:border-neutral-600'
+              } ${isCorner ? 'bg-neutral-900 font-bold' : ''}`}
             >
-              {/* Kare Renk Şeridi */}
-              <div 
-                className="absolute top-0 left-0 right-0 h-1 sm:h-1.5"
-                style={{ backgroundColor: square.color || '#3B82F6' }}
-              />
+              {/* Silik Şehir/Harita Dokusu (Modern Finansal Dashboard Stili) */}
+              <div className="absolute inset-0 overflow-hidden opacity-[0.03] pointer-events-none z-0">
+                <svg className="w-full h-full text-white" viewBox="0 0 100 100" preserveAspectRatio="none" fill="currentColor">
+                  <path d="M0,0 h10 v10 h-10 Z M20,0 h10 v20 h-10 Z M40,0 h10 v15 h-10 Z M60,0 h10 v25 h-10 Z M80,0 h10 v10 h-10 Z M10,30 h10 v10 h-10 Z M30,40 h15 v10 h-15 Z M50,30 h10 v15 h-10 Z M70,40 h10 v10 h-10 Z M90,30 h10 v20 h-10 Z M0,60 h15 v15 h-15 Z M20,70 h10 v10 h-10 Z M40,60 h10 v20 h-10 Z M60,70 h10 v15 h-10 Z M80,60 h15 v10 h-15 Z" />
+                </svg>
+              </div>
+
+              {/* Kare Renk Noktası (Modern Dot) */}
+              {square.color && (
+                <div 
+                  className="absolute top-1.5 left-1.5 w-2.5 h-2.5 rounded-full z-10"
+                  style={{ backgroundColor: square.color }}
+                />
+              )}
 
               {/* Üst Kısım: ID ve Tapu/Otel Rozeti */}
-              <div>
-                <div className={`flex items-center justify-between text-[9px] sm:text-[10px] font-mono pt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  <span className={`font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>#{square.id}</span>
+              <div className="relative z-10">
+                <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-mono pt-0.5 text-neutral-400 pl-3">
+                  <span className="font-bold text-neutral-100">#{square.id}</span>
                   {getSquareIcon(square.type)}
                 </div>
 
                 {ownerPlayer && (
-                  <div className={`my-0.5 flex items-center justify-between gap-1 px-1 py-0.2 rounded border text-[8px] font-mono font-bold ${
+                  <div className={`my-0.5 flex items-center justify-between gap-1 px-1 py-0.2 rounded border border-neutral-800 text-[8px] font-mono font-bold ${
                     ownership.isMortgaged
-                      ? 'bg-red-500/20 border-red-500/40 text-red-300'
-                      : isLight ? 'bg-slate-100 border-slate-300' : 'bg-[#0B132B] border-[#3A506B]'
+                      ? 'bg-red-500/10 text-red-400'
+                      : 'bg-neutral-900 text-neutral-300'
                   }`}>
                     <span className="truncate max-w-[42px]" style={{ color: ownership.isMortgaged ? '#FCA5A5' : (ownerPlayer.color?.hex || '#60A5FA') }}>
                       {ownership.isMortgaged ? '🔒 İPOTEK' : `👑 ${ownerPlayer.name}`}
@@ -237,8 +242,8 @@ export default function GameBoard() {
               </div>
 
               {/* Kare Adı & Fiyatı */}
-              <div className="my-0.5 min-h-[18px]">
-                <div className={`text-[9px] sm:text-[10px] font-bold leading-tight line-clamp-2 ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+              <div className="my-0.5 min-h-[18px] relative z-10">
+                <div className="text-[9px] sm:text-[10px] font-bold leading-tight line-clamp-2 text-neutral-100">
                   {(square.type === 'TRADE' && ownership?.customName) ? ownership.customName : square.name}
                 </div>
                 {(square.price || square.subtitle) && (
@@ -284,9 +289,7 @@ export default function GameBoard() {
 
         {/* TAHTA ORTA MERKEZİ (CENTER HUB: 12x6 İÇ ALAN - col 2..13, row 2..7) */}
         <div 
-          className={`rounded-2xl border p-3 sm:p-4 flex flex-col justify-between overflow-hidden transition-all ${
-            isLight ? 'bg-white/95 border-slate-300 shadow-inner' : 'bg-[#1C2541]/95 border-[#3A506B] shadow-inner'
-          }`}
+          className="rounded-2xl border border-neutral-800 bg-[#1c1c1e] p-3 sm:p-4 flex flex-col justify-between overflow-hidden transition-all shadow-lg shadow-black/50"
           style={{
             gridColumnStart: 2,
             gridColumnEnd: 14,
@@ -316,7 +319,7 @@ export default function GameBoard() {
                   className={`px-2.5 py-1 rounded-lg border font-mono text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
                     isLight 
                       ? 'bg-slate-100 border-slate-300 hover:bg-slate-200 text-slate-800' 
-                      : 'bg-[#0B132B] border-[#3A506B] hover:border-[#5BC0BE] text-slate-200'
+                      : 'bg-[#0a0a0a] border-neutral-800 hover:border-neutral-600 text-neutral-300'
                   }`}
                   title="Gece / Gündüz Temasını Değiştir"
                 >
@@ -338,7 +341,7 @@ export default function GameBoard() {
                   className={`px-2.5 py-1 rounded-lg border font-mono text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
                     isLight
                       ? 'bg-red-50 hover:bg-red-100 border-red-300 text-red-600'
-                      : 'bg-[#0B132B] hover:bg-red-950/40 border-[#3A506B] hover:border-red-500/40 text-slate-300 hover:text-red-300'
+                      : 'bg-[#0a0a0a] hover:bg-red-950/20 border-neutral-800 hover:border-red-500/30 text-neutral-400 hover:text-red-400'
                   }`}
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
@@ -421,7 +424,7 @@ export default function GameBoard() {
               </div>
 
               <div className={`grid grid-cols-4 p-0.5 rounded-xl border font-mono text-[10px] sm:text-[11px] font-bold w-full sm:w-auto ${
-                isLight ? 'bg-slate-100 border-slate-300' : 'bg-[#0B132B] border-[#3A506B]'
+                isLight ? 'bg-slate-100 border-slate-300' : 'bg-neutral-900 border-neutral-800'
               }`}>
                 <button
                   onClick={() => setActiveTab('turn')}
@@ -512,7 +515,7 @@ export default function GameBoard() {
                         <span>Son Atılan Zar:</span>
                         <div className="flex items-center gap-1.5">
                           <span className={`px-2.5 py-0.5 rounded-lg font-bold text-xs border ${
-                            isLight ? 'bg-white border-emerald-400 text-emerald-600 shadow-sm' : 'bg-[#0B132B] border-emerald-500/40 text-emerald-400'
+                            isLight ? 'bg-white border-emerald-400 text-emerald-600 shadow-sm' : 'bg-neutral-900 border-emerald-500/40 text-emerald-400'
                           }`}>
                             🎲 {lastDiceRoll.dice[0]} + {lastDiceRoll.dice[1]} = {lastDiceRoll.diceTotal || (lastDiceRoll.dice[0] + lastDiceRoll.dice[1])}
                           </span>
@@ -542,7 +545,7 @@ export default function GameBoard() {
                     </button>
                   ) : (
                     <div className={`px-5 py-2.5 rounded-xl border text-[11px] font-mono ${
-                      isLight ? 'bg-slate-100 border-slate-300 text-slate-600' : 'bg-[#0B132B]/80 border-[#3A506B] text-slate-400'
+                      isLight ? 'bg-slate-100 border-slate-300 text-slate-600' : 'bg-neutral-900 border-neutral-800 text-neutral-400'
                     }`}>
                       Hamle sırası {activePlayer?.name}'da. Sizin sıranız geldiğinde zar butonu aktifleşecek.
                     </div>

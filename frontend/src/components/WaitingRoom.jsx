@@ -155,12 +155,12 @@ export default function WaitingRoom() {
           return (
             <div
               key={player.id}
-              className={`p-4 sm:p-5 rounded-xl border backdrop-blur-md transition-all flex items-center justify-between gap-4 ${
+              className={`p-4 sm:p-5 rounded-xl border transition-all flex items-center justify-between gap-4 ${
                 isMe
-                  ? 'bg-gradient-to-r from-gray-900/90 via-emerald-950/40 to-gray-900/90 border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.15)] ring-1 ring-emerald-400/50'
+                  ? 'bg-[#1c1c1e] border-emerald-500'
                   : player.isHost
-                  ? 'bg-gradient-to-r from-gray-900/90 via-amber-950/20 to-gray-900/90 border-amber-500/40'
-                  : 'bg-gray-900/60 border-gray-800/80 hover:border-gray-700'
+                  ? 'bg-[#1c1c1e] border-amber-500/40'
+                  : 'bg-[#1c1c1e] border-neutral-800'
               }`}
             >
               <div className="flex items-center gap-3.5 min-w-0">
@@ -248,7 +248,7 @@ export default function WaitingRoom() {
             <button
               onClick={handleStartGameClick}
               disabled={players.length < 2}
-              className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-gray-950 font-mono font-black text-sm uppercase tracking-wider hover:from-emerald-400 hover:to-teal-300 active:scale-[0.98] transition-all duration-200 shadow-lg shadow-emerald-500/25 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-emerald-600 text-neutral-100 font-mono font-black text-sm uppercase tracking-wider hover:bg-emerald-500 active:scale-[0.98] transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
             >
               <Play className="w-4 h-4 fill-current" />
               OYUNU BAŞLAT

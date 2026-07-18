@@ -27,14 +27,10 @@ export default function Home() {
 
   return (
     <div className="min-h-[calc(100vh-65px)] flex flex-col items-center justify-center p-4 sm:p-6 relative">
-      {/* Arka Plan Dekoratif Glow Efektleri */}
-      <div className="absolute top-1/4 left-1/4 w-72 sm:w-96 h-72 sm:h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow" />
-      <div className="absolute bottom-1/4 right-1/4 w-72 sm:w-96 h-72 sm:h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none -z-10" />
-
       {/* Ana Konteyner */}
-      <div className="w-full max-w-md glass-panel rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+      <div className="w-full max-w-md bg-[#1c1c1e] border border-neutral-800 rounded-2xl p-6 sm:p-8 shadow-lg shadow-black/50 relative overflow-hidden">
         {/* Üst Vurgu Çizgisi */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-500" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-neutral-800" />
 
         {/* Başlık & İkon */}
         <div className="text-center mb-6 sm:mb-8">
@@ -115,7 +111,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={loading || !socketConnected || !playerName.trim()}
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-gray-950 font-mono font-bold text-sm hover:from-emerald-400 hover:to-teal-400 active:scale-[0.98] transition-all duration-200 shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+              className="w-full py-3.5 px-4 rounded-xl bg-emerald-600 text-neutral-100 font-mono font-bold text-sm hover:bg-emerald-500 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-gray-950 border-t-transparent rounded-full animate-spin" />
@@ -154,7 +150,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={loading || !socketConnected || !playerName.trim() || roomCodeInput.length !== 6}
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-mono font-bold text-sm hover:from-blue-400 hover:to-indigo-400 active:scale-[0.98] transition-all duration-200 shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+              className="w-full py-3.5 px-4 rounded-xl bg-blue-600 text-neutral-100 font-mono font-bold text-sm hover:bg-blue-500 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

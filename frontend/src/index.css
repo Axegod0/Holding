@@ -6,39 +6,39 @@
 /* ─── CSS Değişkenleri (Tema Sistemi) ─────────────────── */
 @layer base {
   :root {
-    /* Dark Mode Defaults */
-    --bg-root: #0A0E17;
-    --bg-surface: #111827;
-    --bg-elevated: #1C2541;
-    --bg-card: #1a2035;
-    --border-primary: #3A506B;
-    --border-subtle: rgba(58, 80, 107, 0.4);
-    --text-primary: #F1F5F9;
-    --text-secondary: #94A3B8;
-    --text-muted: #475569;
+    /* Dark Mode Defaults (Modern Dark Dashboard) */
+    --bg-root: #0a0a0a;
+    --bg-surface: #121212;
+    --bg-elevated: #1c1c1e;
+    --bg-card: #1c1c1e;
+    --border-primary: rgba(255, 255, 255, 0.05);
+    --border-subtle: rgba(255, 255, 255, 0.02);
+    --text-primary: #f5f5f5;
+    --text-secondary: #a3a3a3;
+    --text-muted: #737373;
     --accent-emerald: #10B981;
     --accent-blue: #3B82F6;
     --accent-amber: #F59E0B;
     --accent-red: #EF4444;
-    --shadow-glow: rgba(16, 185, 129, 0.15);
+    --shadow-glow: rgba(0, 0, 0, 0.5);
   }
 
   /* ── Light Mode Overrides ── */
   .light-mode {
-    --bg-root: #F0F4F8;
-    --bg-surface: #FFFFFF;
-    --bg-elevated: #F8FAFC;
-    --bg-card: #FFFFFF;
-    --border-primary: #CBD5E1;
-    --border-subtle: rgba(148, 163, 184, 0.4);
-    --text-primary: #0F172A;
-    --text-secondary: #334155;
-    --text-muted: #64748B;
+    --bg-root: #f5f5f5;
+    --bg-surface: #ffffff;
+    --bg-elevated: #f0f0f0;
+    --bg-card: #ffffff;
+    --border-primary: rgba(0, 0, 0, 0.1);
+    --border-subtle: rgba(0, 0, 0, 0.05);
+    --text-primary: #171717;
+    --text-secondary: #525252;
+    --text-muted: #a3a3a3;
     --accent-emerald: #059669;
     --accent-blue: #2563EB;
     --accent-amber: #D97706;
     --accent-red: #DC2626;
-    --shadow-glow: rgba(5, 150, 105, 0.12);
+    --shadow-glow: rgba(0, 0, 0, 0.1);
   }
 
   * {
@@ -54,28 +54,27 @@
   }
 }
 
-/* ─── Glassmorphism Paneller ──────────────────────── */
+/* ─── Modern Card Paneller (Eski Glassmorphism) ──────────────────────── */
 .glass-panel {
-  background: rgba(17, 24, 39, 0.78);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
 }
 .light-mode .glass-panel {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(0, 0, 0, 0.10);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
 }
 
 .glass-panel-glow {
-  background: rgba(17, 24, 39, 0.88);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(16, 185, 129, 0.28);
-  box-shadow: 0 0 30px rgba(16, 185, 129, 0.12);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
 }
 .light-mode .glass-panel-glow {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(5, 150, 105, 0.35);
-  box-shadow: 0 0 20px rgba(5, 150, 105, 0.10);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 /* ─── Finansal Grid Arka Plan ─────────────────────── */
@@ -167,18 +166,24 @@
 }
 .stock-rise { animation: stockRise 0.3s ease-out; }
 
-/* ── Glow Button ── */
+/* ─── Accent Button (Eski Glow Button) ── */
 .btn-glow-emerald {
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
-  transition: box-shadow 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.btn-glow-emerald:hover { box-shadow: 0 0 28px rgba(16, 185, 129, 0.65); }
+.btn-glow-emerald:hover { 
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); 
+}
 
 .btn-glow-blue {
-  box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
-  transition: box-shadow 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.btn-glow-blue:hover { box-shadow: 0 0 28px rgba(59, 130, 246, 0.65); }
+.btn-glow-blue:hover { 
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); 
+}
 
 /* ── Mono Font Utility ── */
 .font-mono-game { font-family: 'JetBrains Mono', 'Courier New', monospace; }

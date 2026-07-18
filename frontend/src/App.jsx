@@ -59,15 +59,11 @@ export default function App() {
       currentScreen === 'game'
         ? 'h-screen w-screen overflow-hidden'
         : 'min-h-screen flex flex-col justify-between'
-    } ${isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#0A0E17] text-slate-100'}`}>
+    } bg-[#0a0a0a] text-neutral-100`}>
 
       {/* Üst Bilgi Barı — Lobi ve Bekleme ekranında görünür */}
       {currentScreen !== 'game' && (
-        <header className={`border-b sticky top-0 z-40 backdrop-blur-md transition-colors ${
-          isLight
-            ? 'bg-white/90 border-slate-200 shadow-sm'
-            : 'bg-[#111827]/80 border-[#3A506B]/60'
-        }`}>
+        <header className="border-b sticky top-0 z-40 bg-[#0a0a0a] border-neutral-800">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <span className="text-xl">🏢</span>
