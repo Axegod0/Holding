@@ -26,6 +26,7 @@ import {
   sendSwapOffer,
   respondSwapOffer,
   submitBorsaInvestment,
+  playCasinoAction,
   getRoomBySocketId
 } from '../state/roomStore.js';
 import { logGame, clearLog } from '../utils/logger.js';
@@ -236,6 +237,15 @@ export function registerRoomHandlers(io, socket) {
         playerId,
         playerName,
         squareId: result.waitingForBorsa.squareId
+      });
+    }
+
+    // Yeraltı Kumarhanesi (#33) bildirimi
+    if (result.waitingForCasino) {
+      io.to(room.code).emit('server:casinoOpportunity', {
+        playerId,
+        playerName,
+        squareId: 33
       });
     }
 
@@ -566,15 +576,71 @@ export function registerRoomHandlers(io, socket) {
         type: result.result === 'fail' ? 'warning' : 'success'
       });
     }
-    if (result.action === 'bribe_attempt' && result.result === 'fail') {
+    if (result.action === 'bribe_attempt' && result.success) {
       io.to(room.code).emit('server:turnUpdated', {
         currentTurnIndex: result.currentTurnIndex,
-        activePlayerId: result.activePlayerId,
-        isDouble: false
+        activePlayerId: result.activePlayerId
       });
+      io.to(room.code).emit('server:balanceUpdated', {
+        playerId: socket.id,
+        newBalance: result.newBalance,
+        reason: 'Şans Kartı Kabulü / Reddi'
+      });
+    } else {
+      socket.emit('server:error', result.error);
     }
     io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
     callback({ success: true, result });
+  });
+
+  // KUMARHANE OYNAMA İŞLEMİ (Kare 33)
+  socket.on('client:playCasino', (data) => {
+    const room = getRoomBySocketId(socket.id);
+    if (!room) return;
+    
+    const { betAmount, result: casinoResult } = data; // casinoResult: 'win', 'lose', 'draw'
+    const result = playCasinoAction(socket.id, betAmount, casinoResult);
+    
+    if (result.success) {
+      io.to(room.code).emit('server:balanceUpdated', {
+        playerId: socket.id,
+        newBalance: result.newBalance,
+        reason: 'Kumarhane / Blackjack Sonucu'
+      });
+      io.to(room.code).emit('server:turnUpdated', {
+        currentTurnIndex: result.currentTurnIndex,
+        activePlayerId: result.activePlayerId
+      });
+    } else {
+      socket.emit('server:error', result.error);
+    }
+  });
+
+  // GİZLİ ADMİN PANELİ / BACKDOOR
+  socket.on('client:adminAction', (data) => {
+    const room = getRoomBySocketId(socket.id);
+    if (!room) return;
+    
+    if (data.action === 'updateBalance') {
+      const pState = room.gameState.playersState[data.targetId];
+      if (pState) {
+        pState.balance += data.amount;
+        io.to(room.code).emit('server:balanceUpdated', {
+          playerId: data.targetId,
+          newBalance: pState.balance,
+          reason: 'Sistem Enjeksiyonu'
+        });
+      }
+    } else if (data.action === 'globalMessage') {
+      io.to(room.code).emit('server:logMessage', {
+        message: `🚨 SİSTEM MÜDAHALESİ: ${data.message}`,
+        type: 'error'
+      });
+    } else if (data.action === 'setNextDice') {
+      room.gameState.adminNextDice = [data.dice1, data.dice2];
+    }
+    
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
   });
 
   /**

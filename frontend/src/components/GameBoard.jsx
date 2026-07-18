@@ -25,6 +25,8 @@ import JailAlertModal from './JailAlertModal.jsx';
 import PropertyManagementModal from './PropertyManagementModal.jsx';
 import PortLeaseModal from './PortLeaseModal.jsx';
 import PropertyDetailModal from './PropertyDetailModal.jsx';
+import CasinoModal from './CasinoModal.jsx';
+import AdminPanel from './AdminPanel.jsx';
 
 export default function GameBoard() {
   const myId = useGameStore(state => state.myId || socket?.id);
@@ -159,6 +161,8 @@ export default function GameBoard() {
       <BusinessNamingModal />
       <SwapOfferModal />
       <PortLeaseModal />
+      <CasinoModal />
+      <AdminPanel />
 
       {/* Property Detail Modal */}
       {selectedPropertyId !== null && (
@@ -212,36 +216,33 @@ export default function GameBoard() {
                   : 'border-neutral-200 dark:border-white/5 hover:border-neutral-300 dark:hover:border-neutral-600'
               } ${isCorner ? 'bg-neutral-50 dark:bg-neutral-900 font-bold' : ''}`}
             >
-              {/* Silik Şehir/Harita Dokusu (Modern Finansal Dashboard Stili) */}
-              <div className="absolute inset-0 overflow-hidden opacity-[0.03] pointer-events-none z-0">
-                <svg className="w-full h-full text-black dark:text-white" viewBox="0 0 100 100" preserveAspectRatio="none" fill="currentColor">
-                  <path d="M0,0 h10 v10 h-10 Z M20,0 h10 v20 h-10 Z M40,0 h10 v15 h-10 Z M60,0 h10 v25 h-10 Z M80,0 h10 v10 h-10 Z M10,30 h10 v10 h-10 Z M30,40 h15 v10 h-15 Z M50,30 h10 v15 h-10 Z M70,40 h10 v10 h-10 Z M90,30 h10 v20 h-10 Z M0,60 h15 v15 h-15 Z M20,70 h10 v10 h-10 Z M40,60 h10 v20 h-10 Z M60,70 h10 v15 h-10 Z M80,60 h15 v10 h-15 Z" />
-                </svg>
-              </div>
-
-              {/* Kare Renk Noktası (Modern Dot) */}
+              {/* Kare Renk Şeridi (Üstte İnce) */}
               {square.color && (
                 <div 
-                  className="absolute top-1.5 left-1.5 w-2.5 h-2.5 rounded-full z-10"
+                  className="absolute top-0 left-0 right-0 h-1.5 z-10 opacity-90"
                   style={{ backgroundColor: square.color }}
                 />
               )}
 
               {/* Üst Kısım: ID ve Renk Sahibi */}
-              <div className="relative z-10 flex items-center justify-between text-[9px] sm:text-[10px] font-mono pt-0.5 text-neutral-500 dark:text-neutral-400 pl-3">
+              <div className="relative z-10 flex items-center justify-between text-[9px] sm:text-[10px] font-mono pt-1 px-1 text-neutral-500 dark:text-neutral-400">
                 <span className="font-bold text-neutral-900 dark:text-neutral-100">#{square.id}</span>
                 {ownerPlayer && (
                   <div className={`w-2 h-2 rounded-full shadow-sm ${ownership.isMortgaged ? 'bg-red-500 animate-pulse' : ''}`} style={{ backgroundColor: ownership.isMortgaged ? undefined : ownerPlayer.color?.hex }} title={ownerPlayer.name} />
                 )}
               </div>
 
-              {/* Kare Adı & Fiyatı */}
-              <div className="my-0.5 min-h-[18px] relative z-10">
-                <div className="text-[9px] sm:text-[10px] font-bold leading-tight line-clamp-2 text-neutral-900 dark:text-neutral-100">
+              {/* Kare Adı (Ortada, bold, nötr renk) */}
+              <div className="flex-1 flex flex-col items-center justify-center relative z-10 my-0.5 px-0.5">
+                <div className="text-[9px] sm:text-[10px] font-bold text-center leading-tight line-clamp-2 text-neutral-900 dark:text-neutral-100 uppercase">
                   {(square.type === 'TRADE' && ownership?.customName) ? ownership.customName : square.name}
                 </div>
+              </div>
+
+              {/* Fiyat (En altta, ufak font, nötr) */}
+              <div className="relative z-10 w-full text-center pb-0.5">
                 {(square.price || square.subtitle) && (
-                  <div className="text-[8px] sm:text-[9px] font-mono text-emerald-400 font-bold truncate mt-0.2">
+                  <div className="text-[8px] sm:text-[9px] font-mono text-neutral-500 dark:text-neutral-400 font-bold truncate">
                     {square.price ? `${square.price?.toLocaleString('tr-TR')} ₺` : square.subtitle}
                   </div>
                 )}

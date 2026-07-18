@@ -268,7 +268,11 @@ export function startGame(socketId) {
     bankState,
     jailState,
     activeAuction: null,
-    interestRate: 5 // Merkez Bankası baz faiz oranı (Dinamik %3 - %8)
+    interestRate: 5, // Merkez Bankası baz faiz oranı (Dinamik %3 - %8)
+    wealthFundPool: 0, // Türkiye Varlık Fonu (ID 37) Devlet Kasası Havuzu
+    auctionCooldown: 0, // Dinamik İhale Soğuma Süresi
+    marketSaturationTarget: null, // Dinamik İhale Hedefi
+    marketSaturationTurns: 0 // Dinamik İhale Şartlarının Sağlandığı Tur Sayısı
   };
 
   return { success: true, room };
@@ -337,24 +341,56 @@ export function advanceToNextTurn(room, isDouble) {
 
     const roundsCompleted = Math.floor(room.gameState.totalTurnsCompleted / room.players.length);
 
-    if ((roundsCompleted >= 10 || room.gameState.turnCount >= 10) && !room.gameState.autoAuctionTriggered) {
-      room.gameState.autoAuctionTriggered = true;
-      const unownedSpecialProps = [5, 15, 24, 29, 35].filter(id => !room.gameState.propertyOwnership?.[id]);
-      if (unownedSpecialProps.length > 0) {
-        room.gameState.autoAuctionQueue = [...unownedSpecialProps];
-        const io = room.ioInstance;
-        if (io) {
-          io.to(room.code).emit('server:logMessage', {
-            message: `⚡ [10. TUR ÖZELLEŞTİRMELERİ BAŞLADI!]: Oyun 10. tura ulaştı! Sahipsiz tüm özel işletmeler (${unownedSpecialProps.length} adet) sırayla 30 saniyelik açık ihaleye çıkıyor!`,
-            type: 'warning'
-          });
-          io.to(room.code).emit('server:autoAuctionNotice', {
-            message: '10. Tur Özelleştirmeleri Başladı! Sahipsiz özel işletmeler sırayla açık ihaleye çıkacak.'
-          });
+    // Yeni Dinamik İhale Sistemi (Piyasa Doygunluğu Algoritması)
+    if (roundsCompleted >= 5) {
+      if (room.gameState.auctionCooldown > 0) {
+        room.gameState.auctionCooldown -= 1;
+      } else if (!room.gameState.activeAuction && (!room.gameState.autoAuctionQueue || room.gameState.autoAuctionQueue.length === 0)) {
+        const unownedSpecialProps = [5, 15, 24, 29, 35].filter(id => !room.gameState.propertyOwnership?.[id]);
+        
+        if (unownedSpecialProps.length > 0) {
+          const targetId = room.gameState.marketSaturationTarget || unownedSpecialProps[0];
+          if (!unownedSpecialProps.includes(targetId)) {
+            room.gameState.marketSaturationTarget = unownedSpecialProps[0];
+            room.gameState.marketSaturationTurns = 0;
+          } else {
+            room.gameState.marketSaturationTarget = targetId;
+            const targetSquare = BOARD_DATA.find(s => s.id === targetId);
+            const targetPrice = targetSquare?.price || 150000;
+            
+            let playersWithEnoughCash = 0;
+            room.players.forEach(p => {
+              if ((room.gameState.playersState[p.id]?.balance || 0) >= targetPrice) {
+                playersWithEnoughCash++;
+              }
+            });
+
+            if (playersWithEnoughCash >= 2) {
+              room.gameState.marketSaturationTurns = (room.gameState.marketSaturationTurns || 0) + 1;
+              if (room.gameState.marketSaturationTurns >= 2 * room.players.length) {
+                room.gameState.auctionCooldown = 5 * room.players.length;
+                room.gameState.marketSaturationTurns = 0;
+                
+                room.gameState.autoAuctionQueue = [targetId];
+                const io = room.ioInstance;
+                if (io) {
+                  io.to(room.code).emit('server:logMessage', {
+                    message: `⚡ [PİYASA DOYGUNLUĞU]: Piyasadaki nakit bolluğu nedeniyle sahipsiz ${targetSquare.name} için zorunlu açık ihale başlatılıyor!`,
+                    type: 'warning'
+                  });
+                  io.to(room.code).emit('server:autoAuctionNotice', {
+                    message: `Piyasa Doygunluğu İhalesi: ${targetSquare.name} ihalesi başlıyor!`
+                  });
+                }
+                setTimeout(() => {
+                  startNextAutoAuction(room, room.ioInstance);
+                }, 3000);
+              }
+            } else {
+              room.gameState.marketSaturationTurns = 0;
+            }
+          }
         }
-        setTimeout(() => {
-          startNextAutoAuction(room, room.ioInstance);
-        }, 3000);
       }
     }
   }
@@ -564,8 +600,15 @@ export function rollDice(socketId) {
     return { success: false, error: 'Borç Modundasınız! Turunuza devam etmek için önce borcunuzu ödemeli veya mülk satıp/ihaleye çıkarmalısınız.' };
   }
 
-  const dice1 = Math.floor(Math.random() * 6) + 1;
-  const dice2 = Math.floor(Math.random() * 6) + 1;
+  let dice1 = Math.floor(Math.random() * 6) + 1;
+  let dice2 = Math.floor(Math.random() * 6) + 1;
+
+  if (room.gameState.adminNextDice) {
+    dice1 = room.gameState.adminNextDice[0];
+    dice2 = room.gameState.adminNextDice[1];
+    room.gameState.adminNextDice = null;
+  }
+
   const diceTotal = dice1 + dice2;
   const isDouble = dice1 === dice2;
 
@@ -631,7 +674,7 @@ export function rollDice(socketId) {
   let offerProperty = null;
   let rentPaidData = null;
 
-  // Borsa / Halka Arz (Kare 19) Kontrolü — Sadece #19 borsa, #15 Hammadde Tesisi
+  // Borsa / Halka Arz (Kare 19) Kontrolü
   if (newPosition === 19) {
     room.gameState.waitingForBorsa = {
       playerId: socketId,
@@ -654,6 +697,31 @@ export function rollDice(socketId) {
       currentTurnIndex: room.gameState.currentTurnIndex,
       activePlayerId: activePlayer.id,
       waitingForBorsa: room.gameState.waitingForBorsa
+    };
+  }
+
+  // Yeraltı Kumarhanesi / Blackjack (Kare 33) Kontrolü
+  if (newPosition === 33) {
+    room.gameState.waitingForCasino = {
+      playerId: socketId,
+      isDouble
+    };
+    return {
+      success: true,
+      room,
+      playerId: socketId,
+      playerName: activePlayer.name,
+      dice: [dice1, dice2],
+      diceTotal,
+      oldPosition,
+      newPosition,
+      isDouble,
+      passedGo,
+      salaryAmount,
+      newBalance: playerState.balance,
+      currentTurnIndex: room.gameState.currentTurnIndex,
+      activePlayerId: activePlayer.id,
+      waitingForCasino: room.gameState.waitingForCasino
     };
   }
 
@@ -1032,39 +1100,7 @@ export function rollDice(socketId) {
     sentToJail = true;
   }
 
-  // Gümrük Kapısı -> Anında Hapse Git (ID 33 -> ID 13)
-  if (targetSquare && targetSquare.type === 'gotojail') {
-    if (room.gameState.chanceBuffs?.[socketId]?.taxImmunity) {
-      // Vergi ve Gümrük muafiyeti varsa hapse atma, serbest bırak!
-      sentToJail = false;
-    } else {
-      playerState.position = 13;
-      if (!room.gameState.jailState) room.gameState.jailState = {};
-      room.gameState.jailState[socketId] = { inJail: true, turnsServed: 0 };
-      advanceToNextTurn(room, false);
-      const nextActivePlayerId = room.players[room.gameState.currentTurnIndex]?.id;
-      return {
-        success: true,
-        room,
-        playerId: socketId,
-        playerName: activePlayer.name,
-        dice: [dice1, dice2],
-        diceTotal,
-        oldPosition,
-        newPosition: 13,
-        isDouble,
-        passedGo,
-        salaryAmount,
-        newBalance: playerState.balance,
-        currentTurnIndex: room.gameState.currentTurnIndex,
-        activePlayerId: nextActivePlayerId,
-        offerProperty: null,
-        rentPaidData,
-        sentToJail: true,
-        bankInterestReturn
-      };
-    }
-  }
+  // Eski Gümrük Kapısı mantığı kaldırıldı, Kare 33 artık CASINO ve yukarıda ele alınıyor.
 
   advanceToNextTurn(room, isDouble);
   const nextActivePlayerId = room.players[room.gameState.currentTurnIndex]?.id;
@@ -1893,7 +1929,7 @@ export function startNextAutoAuction(room, io) {
     propertyId: nextPropId,
     propertyName: square.name,
     sellerId: null, // Devlet / Sistem
-    sellerName: 'Devlet / Özelleştirme İdaresi (10. Tur İhalesi)',
+    sellerName: 'Devlet / Özelleştirme İdaresi (Piyasa Doygunluğu İhalesi)',
     currentBid: startPrice,
     highestBidderId: null,
     highestBidderName: null,
@@ -1907,7 +1943,7 @@ export function startNextAutoAuction(room, io) {
   if (io) {
     io.to(room.code).emit('server:auctionStarted', { auction: auctionObj });
     io.to(room.code).emit('server:logMessage', {
-      message: `⚡ [10. TUR ÖZELLEŞTİRMESİ]: Sahipsiz ${square.name} (#${nextPropId}) için 30 saniyelik açık ihale başladı! Başlangıç bedeli: ${startPrice.toLocaleString('tr-TR')} ₺`,
+      message: `⚡ [PİYASA DOYGUNLUĞU İHALESİ]: Sahipsiz ${square.name} (#${nextPropId}) için 30 saniyelik açık ihale başladı! Başlangıç bedeli: ${startPrice.toLocaleString('tr-TR')} ₺`,
       type: 'warning'
     });
     io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
@@ -2083,7 +2119,7 @@ function concludeAuction(room, io) {
     room.gameState.isAutoAuctionRunning = false;
     if (io || room.ioInstance) {
       (io || room.ioInstance).to(room.code).emit('server:logMessage', {
-        message: `🏁 [10. TUR ÖZELLEŞTİRMELERİ TAMAMLANDI!]: Sahipsiz özel işletmelerin ihale süreci sona erdi.`,
+        message: `🏁 [PİYASA DOYGUNLUĞU İHALESİ TAMAMLANDI!]: İhale süreci sona erdi.`,
         type: 'success'
       });
       (io || room.ioInstance).to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });

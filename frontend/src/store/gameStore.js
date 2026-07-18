@@ -96,6 +96,8 @@ export const useGameStore = create((set, get) => ({
     socket.off('server:showChanceCard');
     socket.off('server:newsFlash');
     socket.off('server:playerJailed');
+    socket.off('server:borsaOpportunity');
+    socket.off('server:casinoOpportunity');
     socket.off('server:portLeaseOpportunity');
     socket.off('server:portLeaseWon');
     socket.off('server:borsaOpportunity');
@@ -597,6 +599,14 @@ export const useGameStore = create((set, get) => ({
         get().showToast('📈 Borsa/Halka Arz karesine geldiniz! Yatırım yapmak ister misiniz?', 'info', 6000);
       }
       get().addLog(`📈 ${playerName} Borsa/Halka Arz (#19) karesine geldi. Yatırım kararı bekleniyor...`, 'info');
+    });
+
+    // Yeraltı Kumarhanesi fırsatı (#33)
+    socket.on('server:casinoOpportunity', ({ playerId, playerName }) => {
+      if (playerId === socket.id) {
+        get().showToast('🎰 Yeraltı Kumarhanesi karesine geldiniz! Blackjack oynamak ister misiniz?', 'info', 6000);
+      }
+      get().addLog(`🎰 ${playerName} Yeraltı Kumarhanesi (#33) karesine geldi. Blackjack kararı bekleniyor...`, 'info');
     });
 
     // Sunucu logları

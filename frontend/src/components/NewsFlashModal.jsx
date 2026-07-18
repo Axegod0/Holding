@@ -12,31 +12,19 @@ export default function NewsFlashModal() {
 
   const isCrisis = !!newsFlash.isCrisis;
 
-  // Dinamik Tasarım Değerleri
-  const borderColor = isCrisis 
-    ? 'bg-white dark:bg-[#1c1c1e] border-red-500 shadow-red-500/20 text-neutral-900 dark:text-white'
-    : 'bg-white dark:bg-[#1c1c1e] border-emerald-500 shadow-emerald-500/20 text-neutral-900 dark:text-white';
+  // Dinamik Tasarım Değerleri (Klasik Gazete NYT Stili)
+  const borderColor = 'bg-[#f4f4f0] dark:bg-[#0a0a0a] border-neutral-900 dark:border-neutral-300 text-neutral-900 dark:text-neutral-100';
 
-  const topBarColor = isCrisis 
-    ? 'from-red-600 via-amber-500 to-red-600'
-    : 'from-emerald-600 via-teal-400 to-emerald-600';
+  const topBarColor = 'from-neutral-900 via-neutral-600 to-neutral-900 dark:from-neutral-300 dark:via-neutral-500 dark:to-neutral-300';
 
-  const iconBg = isCrisis 
-    ? 'bg-red-50 dark:bg-red-500/15 border-red-200 dark:border-red-500/40 text-red-600 dark:text-red-500' 
-    : 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-500';
+  const iconBg = 'bg-white dark:bg-neutral-900 border-neutral-900 dark:border-neutral-300 text-neutral-900 dark:text-neutral-100';
   
-  const badgeStyle = isCrisis 
-    ? 'bg-red-50 dark:bg-red-500/15 border-red-200 dark:border-red-500/40 text-red-600 dark:text-red-400' 
-    : 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400';
-  const badgeText = isCrisis ? 'BORSA İSTANBUL • SON DAKİKA KRİZ MANŞETİ' : 'BORSA İSTANBUL • HABER GAZETE MANŞETİ';
+  const badgeStyle = 'bg-neutral-900 dark:bg-neutral-100 border-neutral-900 dark:border-neutral-100 text-white dark:text-neutral-900';
+  const badgeText = isCrisis ? 'THE İSTANBUL TIMES • SON DAKİKA KRİZİ' : 'THE İSTANBUL TIMES • GÜNLÜK BÜLTEN';
 
-  const panelBg = isCrisis
-    ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-500/30 text-red-950 dark:text-red-200'
-    : 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-500/30 text-emerald-950 dark:text-emerald-200';
+  const panelBg = 'bg-white dark:bg-black border-y-4 border-neutral-900 dark:border-neutral-300 text-neutral-900 dark:text-neutral-100 font-serif';
 
-  const buttonStyle = isCrisis
-    ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30'
-    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30';
+  const buttonStyle = 'bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:hover:bg-white dark:text-neutral-900 border-2 border-neutral-900 dark:border-neutral-100';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in zoom-in-95 duration-300">
@@ -55,11 +43,11 @@ export default function NewsFlashModal() {
           <span>{badgeText}</span>
         </div>
  
-        <h2 className="text-2xl sm:text-3xl font-black mt-1 mb-4 leading-tight tracking-wide">
+        <h2 className="text-3xl sm:text-4xl font-serif font-black mt-1 mb-4 leading-tight tracking-tight uppercase border-b-2 border-neutral-900 dark:border-neutral-300 pb-4 w-full">
           {newsFlash.title}
         </h2>
  
-        <div className={`p-6 rounded-2xl border w-full text-base sm:text-lg font-medium leading-relaxed mb-8 font-sans shadow-inner ${panelBg}`}>
+        <div className={`py-6 px-4 w-full text-lg sm:text-xl font-medium leading-relaxed mb-8 ${panelBg}`}>
           {newsFlash.message}
         </div>
  
