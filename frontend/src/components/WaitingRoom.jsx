@@ -43,23 +43,23 @@ export default function WaitingRoom() {
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
           <div>
-            <div className="flex items-center gap-2 text-emerald-400 font-mono text-xs uppercase tracking-widest mb-1.5 font-bold">
-              <Radio className="w-4 h-4 animate-pulse text-emerald-400" />
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-mono text-xs uppercase tracking-widest mb-1.5 font-bold">
+              <Radio className="w-4 h-4 animate-pulse text-emerald-600 dark:text-emerald-400" />
               <span>CANLI LOBİ / BEKLEME ODASI</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">
               Yatırımcılar Bekleniyor...
             </h2>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
               Odaya katılmaları için aşağıdaki 6 haneli kodu arkadaşlarınızla paylaşın.
             </p>
           </div>
 
           {/* Oda Kodu Kutusu */}
-          <div className="flex items-center gap-2.5 bg-gray-950/80 border border-emerald-500/30 p-2.5 pl-5 rounded-xl shadow-inner">
+          <div className="flex items-center gap-2.5 bg-neutral-50 dark:bg-neutral-950/80 border border-emerald-500/30 p-2.5 pl-5 rounded-xl shadow-inner">
             <div>
-              <div className="text-[10px] text-gray-500 font-mono tracking-wider uppercase">ODA KODU</div>
-              <div className="text-2xl sm:text-3xl font-mono font-black text-emerald-400 tracking-[0.25em]">
+              <div className="text-[10px] text-neutral-500 dark:text-neutral-500 font-mono tracking-wider uppercase">ODA KODU</div>
+              <div className="text-2xl sm:text-3xl font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-[0.25em]">
                 {roomCode}
               </div>
             </div>
@@ -77,17 +77,17 @@ export default function WaitingRoom() {
 
       {/* Oyuncu Durumu ve Sayacı */}
       <div className="flex items-center justify-between mb-4 px-1">
-        <div className="flex items-center gap-2 text-sm font-mono text-gray-300 font-semibold">
-          <Users className="w-4 h-4 text-emerald-400" />
+        <div className="flex items-center gap-2 text-sm font-mono text-neutral-700 dark:text-neutral-300 font-semibold">
+          <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <span>KATILAN YATIRIMCILAR</span>
         </div>
-        <div className="font-mono text-xs font-bold px-3 py-1 rounded-full bg-gray-900 border border-gray-800 text-emerald-400">
+        <div className="font-mono text-xs font-bold px-3 py-1 rounded-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-emerald-600 dark:text-emerald-400 shadow-sm">
           [{players.length} / 6] KAPASİTE
         </div>
       </div>
 
       {/* Doluluk Barı */}
-      <div className="w-full h-1.5 bg-gray-900 rounded-full overflow-hidden mb-6 border border-gray-800/80">
+      <div className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-900 rounded-full overflow-hidden mb-6 border border-neutral-300 dark:border-neutral-800/80">
         <div 
           className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-blue-500 transition-all duration-500"
           style={{ width: `${(players.length / 6) * 100}%` }}
@@ -95,13 +95,13 @@ export default function WaitingRoom() {
       </div>
 
       {/* Bekleme Odası İçi Hızlı Piyon Rengi Değiştirme */}
-      <div className="mb-6 p-4 rounded-2xl bg-gray-950/70 border border-gray-800 backdrop-blur-md">
+      <div className="mb-6 p-4 rounded-2xl bg-white dark:bg-neutral-950/70 border border-neutral-200 dark:border-neutral-800 shadow-sm backdrop-blur-md">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-xs font-mono font-bold text-gray-300">
-            <Palette className="w-4 h-4 text-amber-400" />
+          <div className="flex items-center gap-2 text-xs font-mono font-bold text-neutral-800 dark:text-neutral-300">
+            <Palette className="w-4 h-4 text-amber-500 dark:text-amber-400" />
             <span>PİYON RENGİNİZİ DEĞİŞTİRİN</span>
           </div>
-          <span className="text-[11px] font-mono text-gray-500">
+          <span className="text-[11px] font-mono text-neutral-500 dark:text-neutral-500">
             Başka bir yatırımcının rengi seçilemez
           </span>
         </div>
@@ -122,10 +122,10 @@ export default function WaitingRoom() {
                 onClick={() => changeColor(color.id)}
                 className={`relative flex items-center gap-2.5 p-2.5 rounded-xl border transition-all ${
                   isMine
-                    ? 'bg-gray-800 border-white shadow-lg shadow-black/50 scale-105 ring-2 ring-white/30 cursor-default'
+                    ? 'bg-neutral-100 dark:bg-neutral-800 border-neutral-900 dark:border-white shadow-lg shadow-black/10 dark:shadow-black/50 scale-105 ring-2 ring-neutral-900/10 dark:ring-white/30 cursor-default'
                     : isUsedByOther
-                    ? 'bg-gray-900/30 border-gray-800/50 opacity-40 cursor-not-allowed'
-                    : 'bg-gray-900/70 border-gray-800 hover:border-gray-500 hover:bg-gray-800/80 cursor-pointer hover:scale-[1.02]'
+                    ? 'bg-neutral-50 dark:bg-neutral-900/30 border-neutral-200 dark:border-neutral-800/50 opacity-40 cursor-not-allowed'
+                    : 'bg-white dark:bg-neutral-900/70 border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800/80 cursor-pointer hover:scale-[1.02]'
                 }`}
               >
                 <div 
@@ -135,10 +135,10 @@ export default function WaitingRoom() {
                   {isMine && <Check className="w-3 h-3 text-white drop-shadow" />}
                 </div>
                 <div className="flex flex-col text-left min-w-0">
-                  <span className="text-[11px] font-mono font-bold text-white truncate">
+                  <span className="text-[11px] font-mono font-bold text-neutral-900 dark:text-white truncate">
                     {color.name}
                   </span>
-                  <span className="text-[9px] font-mono text-gray-400 truncate">
+                  <span className="text-[9px] font-mono text-neutral-500 dark:text-neutral-400 truncate">
                     {isMine ? '✓ Renginiz' : isUsedByOther ? `(${userWithColor?.name || 'Alındı'})` : 'Seçmek İçin Tıkla'}
                   </span>
                 </div>
@@ -155,12 +155,12 @@ export default function WaitingRoom() {
           return (
             <div
               key={player.id}
-              className={`p-4 sm:p-5 rounded-xl border transition-all flex items-center justify-between gap-4 ${
+              className={`p-4 sm:p-5 rounded-xl border transition-all flex items-center justify-between gap-4 shadow-sm dark:shadow-none ${
                 isMe
-                  ? 'bg-[#1c1c1e] border-emerald-500'
+                  ? 'bg-white dark:bg-[#1c1c1e] border-emerald-500'
                   : player.isHost
-                  ? 'bg-[#1c1c1e] border-amber-500/40'
-                  : 'bg-[#1c1c1e] border-neutral-800'
+                  ? 'bg-white dark:bg-[#1c1c1e] border-amber-500/40'
+                  : 'bg-white dark:bg-[#1c1c1e] border-neutral-200 dark:border-neutral-800'
               }`}
             >
               <div className="flex items-center gap-3.5 min-w-0">
@@ -175,7 +175,7 @@ export default function WaitingRoom() {
 
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-white text-base truncate">
+                    <span className="font-bold text-neutral-900 dark:text-white text-base truncate">
                       {player.name}
                     </span>
                     {isMe && (
@@ -207,7 +207,7 @@ export default function WaitingRoom() {
 
               {/* Oyuncu Rol / Durum */}
               <div className="text-right shrink-0">
-                <div className="text-xs font-mono text-gray-400">DURUM</div>
+                <div className="text-xs font-mono text-neutral-500 dark:text-neutral-400">DURUM</div>
                 <div className="text-xs font-mono text-emerald-400 font-bold flex items-center justify-end gap-1.5 mt-0.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   HAZIR
@@ -221,7 +221,7 @@ export default function WaitingRoom() {
         {Array.from({ length: Math.max(0, 6 - players.length) }).map((_, index) => (
           <div
             key={`empty-${index}`}
-            className="p-4 sm:p-5 rounded-xl border border-dashed border-gray-800/80 bg-gray-950/30 flex items-center justify-center text-gray-600 font-mono text-xs sm:text-sm tracking-wide"
+            className="p-4 sm:p-5 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-800/80 bg-neutral-100 dark:bg-neutral-950/30 flex items-center justify-center text-neutral-400 dark:text-neutral-600 font-mono text-xs sm:text-sm tracking-wide"
           >
             <span>+ BOŞ YATIRIMCI KÖŞESİ #{players.length + index + 1}</span>
           </div>
@@ -229,10 +229,10 @@ export default function WaitingRoom() {
       </div>
 
       {/* Alt Kontrol Paneli (Başlat & Ayrıl Butonları) */}
-      <div className="glass-panel rounded-2xl p-5 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="glass-panel rounded-2xl p-5 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-4">
         <button
           onClick={leaveRoom}
-          className="w-full sm:w-auto px-5 py-3 rounded-xl bg-gray-900 hover:bg-red-950/40 border border-gray-800 hover:border-red-500/40 text-gray-300 hover:text-red-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
+          className="w-full sm:w-auto px-5 py-3 rounded-xl bg-white dark:bg-neutral-900 hover:bg-red-50 dark:hover:bg-red-950/40 border border-neutral-200 dark:border-neutral-800 hover:border-red-300 dark:hover:border-red-500/40 text-neutral-600 dark:text-neutral-300 hover:text-red-600 dark:hover:text-red-300 font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
         >
           <LogOut className="w-4 h-4" />
           ODADAN AYRIL
@@ -255,8 +255,8 @@ export default function WaitingRoom() {
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900/90 border border-gray-800 text-gray-400 font-mono text-xs">
-            <Shield className="w-4 h-4 text-emerald-400 animate-spin-slow" />
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900/90 border border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 font-mono text-xs">
+            <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-spin-slow" />
             <span>Oda kurucusunun (Host) oyunu başlatması bekleniyor...</span>
           </div>
         )}

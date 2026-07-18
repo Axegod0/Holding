@@ -56,8 +56,8 @@ export default function FinancialModal() {
   const bailCalculation = Math.max(5000, Math.round(myNetWorth * 0.05));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/85 backdrop-blur-md animate-fade-in">
-      <div className="glass-panel-glow w-full max-w-2xl rounded-2xl p-6 border border-emerald-500/50 shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 dark:bg-neutral-950/85 backdrop-blur-md animate-fade-in">
+      <div className="bg-white dark:bg-[#1c1c1e] w-full max-w-2xl rounded-2xl p-6 border border-emerald-400/50 dark:border-emerald-500/50 shadow-xl dark:shadow-2xl relative overflow-hidden max-h-[90vh] flex flex-col">
         
         {/* Üst Kapatma Butonu */}
         <button
@@ -65,7 +65,7 @@ export default function FinancialModal() {
             setActiveBankModal(false);
             setActiveJailModal(false);
           }}
-          className="absolute top-4 right-4 p-2 rounded-xl bg-gray-900 text-gray-400 hover:text-white hover:bg-gray-800 transition-all cursor-pointer"
+          className="absolute top-4 right-4 p-2 rounded-xl bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 hover:bg-neutral-200 dark:hover:text-white dark:hover:bg-neutral-800 transition-all cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -73,54 +73,54 @@ export default function FinancialModal() {
         {/* --- BANKA MODALI --- */}
         {activeBankModal && (
           <div className="space-y-6 overflow-y-auto pr-1">
-            <div className="flex items-center gap-3 border-b border-gray-800 pb-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+            <div className="flex items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 shadow-inner">
                 <Landmark className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-2">
+                <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-2">
                   <span>MERKEZ BANKASI // FİNANS & İPOTEK DAİRESİ (#20)</span>
                   {isRemote ? (
-                    <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded text-[9px]">MOBİL / UZAKTAN</span>
+                    <span className="bg-amber-50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 px-1.5 py-0.5 rounded text-[9px]">MOBİL / UZAKTAN</span>
                   ) : (
-                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded text-[9px]">MERKEZ ŞUBE</span>
+                    <span className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 px-1.5 py-0.5 rounded text-[9px]">MERKEZ ŞUBE</span>
                   )}
                 </div>
-                <h3 className="text-xl font-black text-white">Mevduat ve Serbest Kredi İpotek İşlemleri</h3>
+                <h3 className="text-xl font-black text-neutral-900 dark:text-white">Mevduat ve Serbest Kredi İpotek İşlemleri</h3>
               </div>
             </div>
 
             {/* Uzaktan İşlem Uyarı / Bilgi Paneli */}
             {isRemote ? (
-              <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/50 text-xs font-mono text-amber-200 flex items-start gap-2.5">
-                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/50 text-xs font-mono text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="block text-amber-300 uppercase">⚠️ Uzaktan / Mobil Bankacılık İşlemtesiniz</strong>
-                  Şu an Merkez Bankası (#20) karesinde olmadığınız için uzaktan mevduata para ekleyemezsiniz. Acil nakit ihtiyacınız için mülklerinizi ipotekleyip kredi çekebilirsiniz; ancak uzaktan çekilen kredilerde tur başı bileşik faiz <strong className="text-white">%8</strong> olarak işletilir (Merkez şubede %4).
+                  <strong className="block text-amber-700 dark:text-amber-300 uppercase">⚠️ Uzaktan / Mobil Bankacılık İşlemtesiniz</strong>
+                  Şu an Merkez Bankası (#20) karesinde olmadığınız için uzaktan mevduata para ekleyemezsiniz. Acil nakit ihtiyacınız için mülklerinizi ipotekleyip kredi çekebilirsiniz; ancak uzaktan çekilen kredilerde tur başı bileşik faiz <strong className="text-neutral-900 dark:text-white">%8</strong> olarak işletilir (Merkez şubede %4).
                 </div>
               </div>
             ) : (
-              <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/50 text-xs font-mono text-emerald-200 flex items-start gap-2.5">
-                <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/50 text-xs font-mono text-emerald-800 dark:text-emerald-200 flex items-start gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="block text-emerald-300 uppercase">✅ Merkez Bankası Şubesindesiniz (#20)</strong>
+                  <strong className="block text-emerald-700 dark:text-emerald-300 uppercase">✅ Merkez Bankası Şubesindesiniz (#20)</strong>
                   Buradan mevduata para yatırabilir (Tur başı %4 faizle büyür ve istediğiniz zaman çekilebilir) ve mülklerinize düşük faizli (%4) ipotek kredisi alabilirsiniz.
                 </div>
               </div>
             )}
 
             {/* 1. MEVDUAT ALANI */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/30 to-gray-900 border border-emerald-500/30 space-y-3">
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 dark:from-emerald-950/30 to-neutral-100 dark:to-neutral-900 border border-emerald-200 dark:border-emerald-500/30 space-y-3">
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="font-bold text-gray-300 uppercase flex items-center gap-1.5">
-                  <DollarSign className="w-4 h-4 text-emerald-400" />
+                <span className="font-bold text-neutral-600 dark:text-neutral-300 uppercase flex items-center gap-1.5">
+                  <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   Aktif Bileşik Mevduatınız (Tur Başı +%4 Büyür)
                 </span>
-                <span className="text-emerald-400 font-black text-sm">
+                <span className="text-emerald-600 dark:text-emerald-400 font-black text-sm">
                   {bankInfo.deposit?.toLocaleString('tr-TR')} ₺
                 </span>
               </div>
-              <p className="text-[11px] font-mono text-gray-400 leading-relaxed">
+              <p className="text-[11px] font-mono text-neutral-500 dark:text-neutral-400 leading-relaxed">
                 Yatırdığınız tutar her tur başında otomatik olarak %4 bileşik faiz ile katlanarak artar. İstediğiniz zaman tahsil edebilirsiniz.
               </p>
 
@@ -132,7 +132,7 @@ export default function FinancialModal() {
                     onChange={(e) => setDepositAmount(e.target.value)}
                     placeholder={`Yatırılacak tutar (Maks: ${myState.balance?.toLocaleString('tr-TR')} ₺)`}
                     disabled={loading || isRemote || myState.balance <= 0}
-                    className="flex-1 bg-gray-950 border border-gray-800 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 transition-all disabled:opacity-50"
+                    className="flex-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-mono text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 focus:outline-none focus:border-emerald-500 transition-all disabled:opacity-50"
                   />
                   <button
                     type="submit"
@@ -158,16 +158,16 @@ export default function FinancialModal() {
 
             {/* 2. İPOTEK VE SERBEST KREDİ ALANI */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs font-mono font-bold text-gray-300 uppercase">
+              <div className="flex items-center justify-between text-xs font-mono font-bold text-neutral-600 dark:text-neutral-300 uppercase">
                 <span className="flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4 text-cyan-400" />
+                  <Building2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                   Serbest Kredi ve İpotekler (%70 Limit • Bileşik Faiz: {isRemote ? '%8 Mobil' : '%4 Şube'})
                 </span>
-                <span className="text-gray-500">{myProperties.length} Mülk</span>
+                <span className="text-neutral-500">{myProperties.length} Mülk</span>
               </div>
 
               {myProperties.length === 0 ? (
-                <div className="p-4 rounded-xl bg-gray-950 border border-gray-800 text-center text-xs font-mono text-gray-500 italic">
+                <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-center text-xs font-mono text-neutral-500 italic">
                   İpotek verilecek herhangi bir mülkünüz bulunmuyor.
                 </div>
               ) : (
@@ -183,31 +183,31 @@ export default function FinancialModal() {
                         key={prop.id}
                         className={`p-3.5 rounded-xl border flex flex-col justify-between space-y-2.5 text-xs font-mono transition-all ${
                           isMortgaged
-                            ? 'bg-amber-950/25 border-amber-500/40'
-                            : 'bg-gray-950/90 border-gray-800 hover:border-gray-700'
+                            ? 'bg-amber-50 dark:bg-amber-950/25 border-amber-200 dark:border-amber-500/40'
+                            : 'bg-neutral-50 dark:bg-neutral-950/90 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
                         }`}
                       >
                         <div>
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-gray-500">#{prop.id} • ŞEHİR TAPUSU</span>
+                            <span className="text-[10px] text-neutral-500">#{prop.id} • ŞEHİR TAPUSU</span>
                             {isMortgaged && (
-                              <span className="bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded text-[9px] font-bold border border-red-500/30 flex items-center gap-1">
+                              <span className="bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-300 px-1.5 py-0.5 rounded text-[9px] font-bold border border-red-200 dark:border-red-500/30 flex items-center gap-1">
                                 <Lock className="w-2.5 h-2.5" /> İPOTEKLİ
                               </span>
                             )}
                           </div>
-                          <div className="font-bold text-white text-sm mt-0.5">{prop.name}</div>
-                          <div className="text-gray-400 text-[11px] mt-0.5 flex items-center justify-between">
+                          <div className="font-bold text-neutral-900 dark:text-white text-sm mt-0.5">{prop.name}</div>
+                          <div className="text-neutral-500 dark:text-neutral-400 text-[11px] mt-0.5 flex items-center justify-between">
                             <span>Değer: {prop.price?.toLocaleString('tr-TR')} ₺</span>
-                            <span className="text-cyan-400 font-bold">Limit: {maxLimit?.toLocaleString('tr-TR')} ₺</span>
+                            <span className="text-cyan-600 dark:text-cyan-400 font-bold">Limit: {maxLimit?.toLocaleString('tr-TR')} ₺</span>
                           </div>
                         </div>
 
                         {isMortgaged ? (
-                          <div className="space-y-2 pt-2 border-t border-amber-500/30">
-                            <div className="text-[11px] text-amber-300 font-bold flex items-center justify-between">
+                          <div className="space-y-2 pt-2 border-t border-amber-200 dark:border-amber-500/30">
+                            <div className="text-[11px] text-amber-600 dark:text-amber-300 font-bold flex items-center justify-between">
                               <span>Borç / Geri Ödeme:</span>
-                              <span className="text-white bg-amber-950 px-2 py-0.5 rounded border border-amber-500/40">
+                              <span className="text-amber-800 dark:text-white bg-amber-100 dark:bg-amber-950 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-500/40">
                                 {activeLoan?.repayAmount?.toLocaleString('tr-TR') || 0} ₺
                               </span>
                             </div>
@@ -217,7 +217,7 @@ export default function FinancialModal() {
                               className={`w-full py-2 px-2 rounded-lg font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all ${
                                 myState.balance >= (activeLoan?.repayAmount || 0)
                                   ? 'bg-amber-500 text-gray-950 hover:bg-amber-400 cursor-pointer shadow-sm'
-                                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                                  : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-500 cursor-not-allowed'
                               }`}
                             >
                               <Unlock className="w-3 h-3" />
@@ -225,9 +225,9 @@ export default function FinancialModal() {
                             </button>
                           </div>
                         ) : (
-                          <div className="space-y-2 pt-2 border-t border-gray-800/80">
+                          <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800/80">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] text-gray-400 shrink-0">Çekilecek Tutar:</span>
+                              <span className="text-[10px] text-neutral-500 dark:text-neutral-400 shrink-0">Çekilecek Tutar:</span>
                               <input
                                 type="number"
                                 value={currentCustom}
@@ -236,13 +236,13 @@ export default function FinancialModal() {
                                 max={maxLimit}
                                 min={1000}
                                 disabled={loading}
-                                className="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-cyan-300 font-bold focus:outline-none focus:border-cyan-500 text-right"
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-1 text-xs text-cyan-600 dark:text-cyan-300 font-bold focus:outline-none focus:border-cyan-500 text-right"
                               />
                             </div>
                             <button
                               onClick={() => handleLoanSubmit(prop.id, maxLimit)}
                               disabled={loading || Number(currentCustom) <= 0 || Number(currentCustom) > maxLimit}
-                              className="w-full py-2 px-2 rounded-lg bg-cyan-500/15 hover:bg-cyan-500 text-cyan-300 hover:text-gray-950 border border-cyan-500/30 font-bold text-[11px] uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                              className="w-full py-2 px-2 rounded-lg bg-cyan-50 dark:bg-cyan-500/15 hover:bg-cyan-100 dark:hover:bg-cyan-500 text-cyan-700 dark:text-cyan-300 hover:text-cyan-900 dark:hover:text-neutral-950 border border-cyan-200 dark:border-cyan-500/30 font-bold text-[11px] uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <DollarSign className="w-3.5 h-3.5" />
                               <span>Kredi Çek (+{Number(currentCustom || maxLimit).toLocaleString('tr-TR')} ₺)</span>
@@ -261,41 +261,41 @@ export default function FinancialModal() {
         {/* --- HAPİS VE SAYIŞTAY MODALI --- */}
         {activeJailModal && (
           <div className="space-y-6">
-            <div className="flex items-center gap-3 border-b border-gray-800 pb-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400 shadow-inner">
+            <div className="flex items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-500/40 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-inner">
                 <Scale className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider">
+                <div className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">
                   SAYIŞTAY VE HAPİSHANE (#10)
                 </div>
-                <h3 className="text-xl font-black text-white">Adli Durum ve Kefalet Dairesi</h3>
+                <h3 className="text-xl font-black text-neutral-900 dark:text-white">Adli Durum ve Kefalet Dairesi</h3>
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-950/30 via-gray-900 to-gray-900 border border-amber-500/40 space-y-4">
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 dark:from-amber-950/30 via-neutral-100 dark:via-neutral-900 to-neutral-50 dark:to-neutral-900 border border-amber-200 dark:border-amber-500/40 space-y-4">
               <div className="flex items-center justify-between text-xs font-mono font-bold">
-                <span className="text-gray-300">GÜNCEL ADLİ DURUMUNUZ:</span>
-                <span className={`px-2.5 py-1 rounded-lg ${jailInfo.inJail ? 'bg-red-500/20 text-red-400 border border-red-500/40' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'}`}>
+                <span className="text-neutral-600 dark:text-neutral-300">GÜNCEL ADLİ DURUMUNUZ:</span>
+                <span className={`px-2.5 py-1 rounded-lg ${jailInfo.inJail ? 'bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/40' : 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/40'}`}>
                   {jailInfo.inJail ? '🚨 HAPİSTESİNİZ (GÖZALTI)' : '✅ SERBEST / TEMİZ'}
                 </span>
               </div>
 
               {jailInfo.inJail ? (
                 <div className="space-y-4 text-xs font-mono">
-                  <p className="text-gray-400 leading-relaxed">
+                  <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed">
                     Sayıştay denetimi / Gözaltı karesine takıldığınız için şu an serbest hareket edemiyorsunuz. Aşağıdaki 3 seçenekten birini seçerek turunuza yön verebilirsiniz:
                   </p>
 
-                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-gray-950 border border-gray-800">
+                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800">
                     <div>
-                      <span className="text-gray-500 block text-[10px] uppercase">Gözaltı Süresi:</span>
-                      <span className="text-white font-bold block mt-0.5">{jailInfo.turnsServed || 0}. Tur / 3</span>
+                      <span className="text-neutral-500 block text-[10px] uppercase">Gözaltı Süresi:</span>
+                      <span className="text-neutral-900 dark:text-white font-bold block mt-0.5">{jailInfo.turnsServed || 0}. Tur / 3</span>
                     </div>
                     <div className="text-right">
-                      <span className="text-gray-500 block text-[10px] uppercase">Net Varlık %5 Kefalet:</span>
-                      <span className="text-amber-400 font-black text-sm block mt-0.5">{bailCalculation.toLocaleString('tr-TR')} ₺</span>
-                      <span className="text-gray-600 block text-[9px] mt-0.5">(Bakiye + Mülk Değeri) × %5</span>
+                      <span className="text-neutral-500 block text-[10px] uppercase">Net Varlık %5 Kefalet:</span>
+                      <span className="text-amber-600 dark:text-amber-400 font-black text-sm block mt-0.5">{bailCalculation.toLocaleString('tr-TR')} ₺</span>
+                      <span className="text-neutral-400 dark:text-neutral-600 block text-[9px] mt-0.5">(Bakiye + Mülk Değeri) × %5</span>
                     </div>
                   </div>
 
@@ -307,7 +307,7 @@ export default function FinancialModal() {
                       className={`w-full py-3 px-4 rounded-xl font-bold tracking-wider transition-all flex items-center justify-center gap-2 ${
                         myState.balance >= bailCalculation
                           ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-gray-950 cursor-pointer shadow-lg shadow-amber-500/20'
-                          : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                          : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 cursor-not-allowed'
                       }`}
                     >
                       <ShieldCheck className="w-4 h-4 shrink-0" />
@@ -331,16 +331,16 @@ export default function FinancialModal() {
                         rollDice();
                       }}
                       disabled={loading}
-                      className="w-full py-3 px-4 rounded-xl bg-gray-900 hover:bg-gray-800 text-gray-300 border border-gray-700 font-bold tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
+                      className="w-full py-3 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 font-bold tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
                     >
-                      <Scale className="w-4 h-4 shrink-0 text-amber-400" />
+                      <Scale className="w-4 h-4 shrink-0 text-amber-500 dark:text-amber-400" />
                       <span>3. Bekle & Çift Zar At (3 Tur Çift Gelmezse Zorunlu Çıkış)</span>
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-6 space-y-2 text-xs font-mono text-gray-400">
-                  <ShieldCheck className="w-10 h-10 text-emerald-400 mx-auto" />
+                <div className="text-center py-6 space-y-2 text-xs font-mono text-neutral-500 dark:text-neutral-400">
+                  <ShieldCheck className="w-10 h-10 text-emerald-600 dark:text-emerald-400 mx-auto" />
                   <p>Hapiste değilsiniz. Tahtada özgürce ticaret ve yatırım yapabilirsiniz.</p>
                 </div>
               )}

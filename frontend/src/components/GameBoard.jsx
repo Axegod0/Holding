@@ -160,7 +160,7 @@ export default function GameBoard() {
 
       {/* 14x8 DİKDÖRTGEN TAHTA (Ekranın Tamamına Fit Olur, Mobil/Küçük Ekranlarda Kaydırılabilir Kesintisiz Oyun Deneyimi Sunar) */}
       <div 
-        className="min-w-[1020px] min-h-[620px] lg:min-w-0 lg:min-h-0 w-full h-full rounded-3xl border border-neutral-800 p-1.5 sm:p-2 transition-all relative bg-[#0a0a0a]"
+        className="min-w-[1020px] min-h-[620px] lg:min-w-0 lg:min-h-0 w-full h-full rounded-3xl border border-neutral-300 dark:border-neutral-800 p-1.5 sm:p-2 transition-all relative bg-neutral-100 dark:bg-[#0a0a0a]"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(14, minmax(0, 1fr))',
@@ -191,19 +191,19 @@ export default function GameBoard() {
                 gridColumnStart: coords.gridColumnStart,
                 gridRowStart: coords.gridRowStart
               }}
-              className={`relative p-1 sm:p-1.5 rounded-xl border border-white/5 transition-all flex flex-col justify-between overflow-hidden shadow-lg shadow-black/50 bg-[#1c1c1e] ${
-                square.id === 20 || square.id === 13 || square.type === 'bank' || square.type === 'jail' ? 'cursor-pointer hover:border-neutral-700' : ''
+              className={`relative p-1 sm:p-1.5 rounded-xl border transition-all flex flex-col justify-between overflow-hidden shadow-sm dark:shadow-lg dark:shadow-black/50 bg-white dark:bg-[#1c1c1e] ${
+                square.id === 20 || square.id === 13 || square.type === 'bank' || square.type === 'jail' ? 'cursor-pointer hover:border-neutral-300 dark:hover:border-neutral-700' : ''
               } ${
                 playersOnSquare.length > 0
-                  ? 'border-neutral-400 bg-[#262626] z-10'
+                  ? 'border-neutral-400 bg-neutral-200 dark:bg-[#262626] z-10'
                   : ownerPlayer
-                  ? 'border-neutral-700 bg-[#1c1c1e]'
-                  : 'hover:border-neutral-600'
-              } ${isCorner ? 'bg-neutral-900 font-bold' : ''}`}
+                  ? 'border-neutral-300 dark:border-neutral-700'
+                  : 'border-neutral-200 dark:border-white/5 hover:border-neutral-300 dark:hover:border-neutral-600'
+              } ${isCorner ? 'bg-neutral-50 dark:bg-neutral-900 font-bold' : ''}`}
             >
               {/* Silik Şehir/Harita Dokusu (Modern Finansal Dashboard Stili) */}
               <div className="absolute inset-0 overflow-hidden opacity-[0.03] pointer-events-none z-0">
-                <svg className="w-full h-full text-white" viewBox="0 0 100 100" preserveAspectRatio="none" fill="currentColor">
+                <svg className="w-full h-full text-black dark:text-white" viewBox="0 0 100 100" preserveAspectRatio="none" fill="currentColor">
                   <path d="M0,0 h10 v10 h-10 Z M20,0 h10 v20 h-10 Z M40,0 h10 v15 h-10 Z M60,0 h10 v25 h-10 Z M80,0 h10 v10 h-10 Z M10,30 h10 v10 h-10 Z M30,40 h15 v10 h-15 Z M50,30 h10 v15 h-10 Z M70,40 h10 v10 h-10 Z M90,30 h10 v20 h-10 Z M0,60 h15 v15 h-15 Z M20,70 h10 v10 h-10 Z M40,60 h10 v20 h-10 Z M60,70 h10 v15 h-10 Z M80,60 h15 v10 h-15 Z" />
                 </svg>
               </div>
@@ -218,16 +218,16 @@ export default function GameBoard() {
 
               {/* Üst Kısım: ID ve Tapu/Otel Rozeti */}
               <div className="relative z-10">
-                <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-mono pt-0.5 text-neutral-400 pl-3">
-                  <span className="font-bold text-neutral-100">#{square.id}</span>
+                <div className="flex items-center justify-between text-[9px] sm:text-[10px] font-mono pt-0.5 text-neutral-500 dark:text-neutral-400 pl-3">
+                  <span className="font-bold text-neutral-900 dark:text-neutral-100">#{square.id}</span>
                   {getSquareIcon(square.type)}
                 </div>
 
                 {ownerPlayer && (
-                  <div className={`my-0.5 flex items-center justify-between gap-1 px-1 py-0.2 rounded border border-neutral-800 text-[8px] font-mono font-bold ${
+                  <div className={`my-0.5 flex items-center justify-between gap-1 px-1 py-0.2 rounded border text-[8px] font-mono font-bold ${
                     ownership.isMortgaged
-                      ? 'bg-red-500/10 text-red-400'
-                      : 'bg-neutral-900 text-neutral-300'
+                      ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400'
+                      : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300'
                   }`}>
                     <span className="truncate max-w-[42px]" style={{ color: ownership.isMortgaged ? '#FCA5A5' : (ownerPlayer.color?.hex || '#60A5FA') }}>
                       {ownership.isMortgaged ? '🔒 İPOTEK' : `👑 ${ownerPlayer.name}`}
@@ -243,7 +243,7 @@ export default function GameBoard() {
 
               {/* Kare Adı & Fiyatı */}
               <div className="my-0.5 min-h-[18px] relative z-10">
-                <div className="text-[9px] sm:text-[10px] font-bold leading-tight line-clamp-2 text-neutral-100">
+                <div className="text-[9px] sm:text-[10px] font-bold leading-tight line-clamp-2 text-neutral-900 dark:text-neutral-100">
                   {(square.type === 'TRADE' && ownership?.customName) ? ownership.customName : square.name}
                 </div>
                 {(square.price || square.subtitle) && (
@@ -289,7 +289,7 @@ export default function GameBoard() {
 
         {/* TAHTA ORTA MERKEZİ (CENTER HUB: 12x6 İÇ ALAN - col 2..13, row 2..7) */}
         <div 
-          className="rounded-2xl border border-neutral-800 bg-[#1c1c1e] p-3 sm:p-4 flex flex-col justify-between overflow-hidden transition-all shadow-lg shadow-black/50"
+          className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1c1c1e] p-3 sm:p-4 flex flex-col justify-between overflow-hidden transition-all shadow-sm dark:shadow-lg dark:shadow-black/50"
           style={{
             gridColumnStart: 2,
             gridColumnEnd: 14,

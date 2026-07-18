@@ -9,7 +9,6 @@ export default function SwapPanel() {
   const sendSwapOffer = useGameStore(state => state.sendSwapOffer);
   const loading = useGameStore(state => state.loading);
   const theme = useGameStore(state => state.theme);
-  const isLight = theme === 'light';
 
   const myId = useGameStore(state => state.myId) || socket?.id;
 
@@ -75,18 +74,16 @@ export default function SwapPanel() {
   };
 
   return (
-    <div className={`w-full border rounded-3xl p-5 space-y-5 animate-fade-in ${
-      isLight ? 'bg-white border-amber-400 text-slate-900 shadow-md' : 'bg-gray-900/90 border-amber-500/30 text-white'
-    }`}>
+    <div className="w-full border rounded-3xl p-5 space-y-5 animate-fade-in bg-white dark:bg-[#1c1c1e] border-amber-400 dark:border-amber-500/30 text-neutral-900 dark:text-white shadow-md dark:shadow-none">
       
       {/* Panel Header */}
-      <div className={`flex items-center gap-3 border-b pb-3 ${isLight ? 'border-slate-200' : 'border-gray-800'}`}>
-        <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+      <div className="flex items-center gap-3 border-b pb-3 border-neutral-200 dark:border-neutral-800">
+        <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/40 flex items-center justify-center text-amber-500 dark:text-amber-400">
           <Handshake className="w-5 h-5" />
         </div>
         <div>
           <h3 className="text-base font-extrabold leading-tight">Takas Masası (Bilateral Trade)</h3>
-          <p className={`text-[10px] font-mono ${isLight ? 'text-slate-500' : 'text-gray-400'}`}>
+          <p className="text-[10px] font-mono text-neutral-500 dark:text-neutral-400">
             Karşılıklı varlık ve para takası sözleşmeleri teklif edin.
           </p>
         </div>
@@ -96,7 +93,7 @@ export default function SwapPanel() {
         
         {/* Oyuncu Seçimi */}
         <div className="space-y-1.5">
-          <label className={`text-[10px] font-mono font-bold tracking-wider uppercase block ${isLight ? 'text-slate-700' : 'text-gray-400'}`}>
+          <label className="text-[10px] font-mono font-bold tracking-wider uppercase block text-neutral-700 dark:text-neutral-400">
             🤝 TAKAS YAPILACAK ORTAK SEÇİN
           </label>
           <select
@@ -107,7 +104,7 @@ export default function SwapPanel() {
               setSelectedRequestedProps([]);
               setRequestedCash('0');
             }}
-            className="w-full bg-gray-950 border border-gray-700 focus:border-amber-500 rounded-xl p-2.5 text-xs text-white font-mono focus:outline-none"
+            className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 focus:border-amber-500 rounded-xl p-2.5 text-xs text-neutral-900 dark:text-white font-mono focus:outline-none"
           >
             <option value="">Bir yatırımcı seçin...</option>
             {otherPlayers.map(p => (
@@ -120,14 +117,14 @@ export default function SwapPanel() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           
           {/* SOL: Sizin Sunduklarınız (Offered) */}
-          <div className="p-4 rounded-2xl bg-gray-950/80 border border-gray-800 space-y-3.5">
-            <span className="text-[10px] font-mono font-bold text-emerald-400 block tracking-wider">
+          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-950/80 border border-neutral-200 dark:border-neutral-800 space-y-3.5">
+            <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 block tracking-wider">
               ➕ SİZİN VERECEKLERİNİZ (OFFERED)
             </span>
 
             {/* Para Sunduğu */}
             <div className="space-y-1">
-              <span className="text-[9px] font-mono text-gray-500 block">Eklenecek Nakit (₺):</span>
+              <span className="text-[9px] font-mono text-neutral-500 block">Eklenecek Nakit (₺):</span>
               <div className="relative">
                 <input
                   type="number"
@@ -135,29 +132,29 @@ export default function SwapPanel() {
                   max={myState.balance}
                   value={offeredCash}
                   onChange={e => setOfferedCash(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 pl-7 text-xs text-white font-mono focus:outline-none"
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg p-2 pl-7 text-xs text-neutral-900 dark:text-white font-mono focus:outline-none"
                 />
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs">₺</span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-500 text-xs">₺</span>
               </div>
-              <span className="text-[9px] font-mono text-gray-600 block">Maks: {myState.balance?.toLocaleString('tr-TR')} ₺</span>
+              <span className="text-[9px] font-mono text-neutral-500 block">Maks: {myState.balance?.toLocaleString('tr-TR')} ₺</span>
             </div>
 
             {/* Mülk Sunduğu */}
             <div className="space-y-1.5">
-              <span className="text-[9px] font-mono text-gray-500 block">Sunduğunuz Tapular (Tapu seçin):</span>
+              <span className="text-[9px] font-mono text-neutral-500 block">Sunduğunuz Tapular (Tapu seçin):</span>
               {myProperties.length === 0 ? (
-                <span className="text-[10px] font-mono text-gray-600 block italic">Takas edilebilir tapunuz bulunmuyor.</span>
+                <span className="text-[10px] font-mono text-neutral-500 block italic">Takas edilebilir tapunuz bulunmuyor.</span>
               ) : (
-                <div className="max-h-[120px] overflow-y-auto space-y-1 border border-gray-850 p-2 rounded-lg bg-gray-900/50">
+                <div className="max-h-[120px] overflow-y-auto space-y-1 border border-neutral-200 dark:border-neutral-800/80 p-2 rounded-lg bg-white dark:bg-neutral-900/50">
                   {myProperties.map(p => (
-                    <label key={p.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-gray-850">
+                    <label key={p.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800/50">
                       <input
                         type="checkbox"
                         checked={selectedOfferedProps.includes(p.id)}
                         onChange={() => handleToggleOfferedProp(p.id)}
-                        className="rounded border-gray-700 text-emerald-500 focus:ring-emerald-500 bg-gray-950"
+                        className="rounded border-neutral-300 dark:border-neutral-700 text-emerald-500 focus:ring-emerald-500 bg-white dark:bg-neutral-950"
                       />
-                      <span className="text-[11px] font-mono text-gray-300 leading-tight">
+                      <span className="text-[11px] font-mono text-neutral-700 dark:text-neutral-300 leading-tight">
                         {p.name} (#{p.id})
                       </span>
                     </label>
@@ -168,14 +165,14 @@ export default function SwapPanel() {
           </div>
 
           {/* SAĞ: Karşıdan İstedikleriniz (Requested) */}
-          <div className="p-4 rounded-2xl bg-gray-950/80 border border-gray-800 space-y-3.5">
-            <span className="text-[10px] font-mono font-bold text-red-400 block tracking-wider">
+          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-950/80 border border-neutral-200 dark:border-neutral-800 space-y-3.5">
+            <span className="text-[10px] font-mono font-bold text-red-600 dark:text-red-400 block tracking-wider">
               ➖ KARŞIDAN İSTEDİKLERİNİZ (REQUESTED)
             </span>
 
             {/* Para İsteği */}
             <div className="space-y-1">
-              <span className="text-[9px] font-mono text-gray-500 block">İstenecek Nakit (₺):</span>
+              <span className="text-[9px] font-mono text-neutral-500 block">İstenecek Nakit (₺):</span>
               <div className="relative">
                 <input
                   type="number"
@@ -184,33 +181,33 @@ export default function SwapPanel() {
                   max={targetState?.balance || 0}
                   value={requestedCash}
                   onChange={e => setRequestedCash(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 pl-7 text-xs text-white font-mono focus:outline-none disabled:opacity-40"
+                  className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg p-2 pl-7 text-xs text-neutral-900 dark:text-white font-mono focus:outline-none disabled:opacity-40"
                 />
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs">₺</span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-500 text-xs">₺</span>
               </div>
               {targetState && (
-                <span className="text-[9px] font-mono text-gray-600 block">Karşı Bakiye: {targetState.balance?.toLocaleString('tr-TR')} ₺</span>
+                <span className="text-[9px] font-mono text-neutral-500 block">Karşı Bakiye: {targetState.balance?.toLocaleString('tr-TR')} ₺</span>
               )}
             </div>
 
             {/* Mülk İsteği */}
             <div className="space-y-1.5">
-              <span className="text-[9px] font-mono text-gray-500 block">Karşıdan İstenen Tapular:</span>
+              <span className="text-[9px] font-mono text-neutral-500 block">Karşıdan İstenen Tapular:</span>
               {!selectedTargetId ? (
-                <span className="text-[10px] font-mono text-gray-600 block italic">Önce takas ortağı seçin.</span>
+                <span className="text-[10px] font-mono text-neutral-500 block italic">Önce takas ortağı seçin.</span>
               ) : targetProperties.length === 0 ? (
-                <span className="text-[10px] font-mono text-gray-600 block italic">Ortağın takas edilebilir tapusu bulunmuyor.</span>
+                <span className="text-[10px] font-mono text-neutral-500 block italic">Ortağın takas edilebilir tapusu bulunmuyor.</span>
               ) : (
-                <div className="max-h-[120px] overflow-y-auto space-y-1 border border-gray-850 p-2 rounded-lg bg-gray-900/50">
+                <div className="max-h-[120px] overflow-y-auto space-y-1 border border-neutral-200 dark:border-neutral-800/80 p-2 rounded-lg bg-white dark:bg-neutral-900/50">
                   {targetProperties.map(p => (
-                    <label key={p.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-gray-850">
+                    <label key={p.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800/50">
                       <input
                         type="checkbox"
                         checked={selectedRequestedProps.includes(p.id)}
                         onChange={() => handleToggleRequestedProp(p.id)}
-                        className="rounded border-gray-700 text-red-500 focus:ring-red-500 bg-gray-950"
+                        className="rounded border-neutral-300 dark:border-neutral-700 text-red-500 focus:ring-red-500 bg-white dark:bg-neutral-950"
                       />
-                      <span className="text-[11px] font-mono text-gray-300 leading-tight">
+                      <span className="text-[11px] font-mono text-neutral-700 dark:text-neutral-300 leading-tight">
                         {p.name} (#{p.id})
                       </span>
                     </label>
@@ -228,8 +225,8 @@ export default function SwapPanel() {
           disabled={loading || !selectedTargetId || (selectedOfferedProps.length === 0 && Number(offeredCash) === 0 && selectedRequestedProps.length === 0 && Number(requestedCash) === 0)}
           className={`w-full py-3 rounded-xl font-mono font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg ${
             !selectedTargetId
-              ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
-              : 'bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 hover:from-amber-500 hover:to-yellow-400 text-gray-950 hover:shadow-amber-500/20 cursor-pointer border border-amber-500/30'
+              ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-600 cursor-not-allowed border border-neutral-300 dark:border-neutral-700'
+              : 'bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 hover:from-amber-500 hover:to-yellow-400 text-white dark:text-neutral-950 hover:shadow-amber-500/20 cursor-pointer border border-amber-500/30'
           }`}
         >
           <Send className="w-4 h-4" />

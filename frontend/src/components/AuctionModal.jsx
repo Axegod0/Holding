@@ -25,16 +25,16 @@ export default function AuctionModal() {
     return (
       <div 
         onClick={() => setAuctionModalMinimized(false)}
-        className="fixed bottom-4 right-4 z-40 bg-gray-900 border border-amber-500 rounded-2xl p-4 shadow-[0_10px_30px_rgba(245,158,11,0.25)] cursor-pointer hover:border-amber-400 hover:scale-105 transition-all w-72 flex flex-col gap-2 glass-panel-glow text-white select-none animate-slide-in"
+        className="fixed bottom-4 right-4 z-40 bg-white dark:bg-neutral-900 border border-amber-400/50 dark:border-amber-500 rounded-2xl p-4 shadow-xl dark:shadow-[0_10px_30px_rgba(245,158,11,0.25)] cursor-pointer hover:border-amber-500 hover:scale-105 transition-all w-72 flex flex-col gap-2 text-neutral-900 dark:text-white select-none animate-slide-in"
       >
-        <div className="flex items-center justify-between border-b border-gray-800 pb-1.5">
+        <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-1.5">
           <div className="flex items-center gap-2">
-            <Hammer className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
-            <span className="text-[10px] font-mono font-bold tracking-wider text-amber-400">AKTİF İHALE (PİP)</span>
+            <Hammer className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 animate-bounce" />
+            <span className="text-[10px] font-mono font-bold tracking-wider text-amber-600 dark:text-amber-400">AKTİF İHALE (PİP)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className={`px-2 py-0.5 rounded font-mono text-[10px] ${
-              timeLeft <= 10 ? 'bg-red-950 text-red-400 animate-pulse' : 'bg-gray-800 text-amber-300'
+              timeLeft <= 10 ? 'bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 animate-pulse' : 'bg-amber-50 dark:bg-neutral-800 text-amber-600 dark:text-amber-300'
             }`}>
               {timeLeft} sn
             </div>
@@ -43,19 +43,19 @@ export default function AuctionModal() {
                 e.stopPropagation();
                 setAuctionModalMinimized(false);
               }}
-              className="text-gray-400 hover:text-white"
+              className="text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
         <div className="flex justify-between items-center">
-          <div className="font-extrabold text-sm truncate max-w-[160px]">{activeAuction.propertyName}</div>
-          <div className="text-white font-bold text-xs font-mono">{currentBid.toLocaleString('tr-TR')} ₺</div>
+          <div className="font-extrabold text-sm truncate max-w-[160px] text-neutral-900 dark:text-white">{activeAuction.propertyName}</div>
+          <div className="text-neutral-900 dark:text-white font-bold text-xs font-mono">{currentBid.toLocaleString('tr-TR')} ₺</div>
         </div>
-        <div className="text-[9px] text-gray-400 font-mono flex items-center justify-between mt-1">
+        <div className="text-[9px] text-neutral-500 dark:text-neutral-400 font-mono flex items-center justify-between mt-1">
           <span>Lider: {activeAuction.highestBidderName || 'Yok'}</span>
-          <span className="text-amber-400 font-semibold underline">Büyüt & Teklif Ver</span>
+          <span className="text-amber-500 dark:text-amber-400 font-semibold underline">Büyüt & Teklif Ver</span>
         </div>
       </div>
     );
@@ -77,8 +77,8 @@ export default function AuctionModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/85 backdrop-blur-md animate-fade-in overflow-y-auto">
-      <div className="glass-panel-glow w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 border border-amber-500/60 shadow-[0_0_50px_rgba(245,158,11,0.35)] relative space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 dark:bg-neutral-950/85 backdrop-blur-md animate-fade-in overflow-y-auto">
+      <div className="bg-white dark:bg-[#1c1c1e] w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 border border-amber-400/50 dark:border-amber-500/60 shadow-xl dark:shadow-[0_0_50px_rgba(245,158,11,0.35)] relative space-y-6">
         
         {/* Üst Dekorasyon Bantı */}
         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 animate-pulse" />
@@ -86,24 +86,24 @@ export default function AuctionModal() {
         {/* Küçültme (Minimize) Butonu */}
         <button
           onClick={() => setAuctionModalMinimized(true)}
-          className="absolute top-4 right-4 p-2 rounded-xl bg-gray-950/80 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-white transition-all cursor-pointer z-10"
+          className="absolute top-4 right-4 p-2 rounded-xl bg-neutral-100 dark:bg-neutral-950/80 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer z-10"
           title="Müzayedeyi Küçült (Banka/İpotek işlemleri için)"
         >
           <Minimize2 className="w-4 h-4" />
         </button>
 
         {/* Başlık ve Kalan Süre */}
-        <div className="flex items-center justify-between border-b border-gray-800/80 pb-4">
+        <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800/80 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 shadow-lg">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/50 flex items-center justify-center text-amber-500 dark:text-amber-400 shadow-sm dark:shadow-lg">
               <Hammer className="w-6 h-6 animate-bounce" />
             </div>
             <div>
-              <div className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <div className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3" />
                 CANLI MÜZAYEDE & İHALE MASASI
               </div>
-              <h3 className="text-xl font-black text-white">
+              <h3 className="text-xl font-black text-neutral-900 dark:text-white">
                 {activeAuction.propertyName} {activeAuction.propertyId !== null && activeAuction.propertyId !== undefined ? `(#${activeAuction.propertyId})` : ''}
               </h3>
             </div>
@@ -111,8 +111,8 @@ export default function AuctionModal() {
 
           <div className={`flex flex-col items-end px-3.5 py-2 rounded-xl border font-mono ${
             timeLeft <= 10 
-              ? 'bg-red-950/80 border-red-500 text-red-400 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.4)]'
-              : 'bg-gray-900 border-gray-700 text-amber-300'
+              ? 'bg-red-50 dark:bg-red-950/80 border-red-300 dark:border-red-500 text-red-600 dark:text-red-400 animate-pulse dark:shadow-[0_0_15px_rgba(239,68,68,0.4)]'
+              : 'bg-amber-50 dark:bg-neutral-900 border-amber-200 dark:border-neutral-700 text-amber-600 dark:text-amber-300'
           }`}>
             <div className="flex items-center gap-1 text-[11px] uppercase font-bold">
               <Clock className="w-3.5 h-3.5" />
@@ -125,33 +125,33 @@ export default function AuctionModal() {
         </div>
 
         {/* Satıcı ve Açılış Bedeli */}
-        <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 text-xs font-mono">
+        <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-neutral-50 dark:bg-neutral-950/80 border border-neutral-200 dark:border-neutral-800 text-xs font-mono">
           <div>
-            <span className="text-gray-500 block text-[10px] uppercase">
+            <span className="text-neutral-500 block text-[10px] uppercase">
               {activeAuction.isSpecialAuction ? 'İHALE SAHİBİ:' : 'SATICI YATIRIMCI:'}
             </span>
-            <span className="text-white font-bold block mt-0.5">{activeAuction.sellerName || 'Devlet / Tarım Bakanlığı'} {isSeller && '(SİZ)'}</span>
+            <span className="text-neutral-900 dark:text-white font-bold block mt-0.5">{activeAuction.sellerName || 'Devlet / Tarım Bakanlığı'} {isSeller && '(SİZ)'}</span>
           </div>
           <div className="text-right">
-            <span className="text-gray-500 block text-[10px] uppercase">
+            <span className="text-neutral-500 block text-[10px] uppercase">
               {activeAuction.isSpecialAuction ? 'AÇILIŞ BEDELİ:' : 'AÇILIŞ BEDELİ (%65):'}
             </span>
-            <span className="text-amber-400 font-bold block mt-0.5">{activeAuction.startingPrice?.toLocaleString('tr-TR')} ₺</span>
+            <span className="text-amber-600 dark:text-amber-400 font-bold block mt-0.5">{activeAuction.startingPrice?.toLocaleString('tr-TR')} ₺</span>
           </div>
         </div>
 
         {/* Güncel En Yüksek Teklif Kutusu */}
-        <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-950/40 via-gray-900 to-gray-900 border border-amber-500/40 text-center relative overflow-hidden shadow-inner">
-          <div className="text-xs font-mono text-amber-400/90 font-bold uppercase tracking-wider mb-1">
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 dark:from-amber-950/40 via-neutral-100 dark:via-neutral-900 to-neutral-50 dark:to-neutral-900 border border-amber-300 dark:border-amber-500/40 text-center relative overflow-hidden shadow-inner">
+          <div className="text-xs font-mono text-amber-600 dark:text-amber-400/90 font-bold uppercase tracking-wider mb-1">
             GÜNCEL EN YÜKSEK TEKLİF
           </div>
-          <div className="text-3xl sm:text-4xl font-mono font-black text-white tracking-tight py-1">
+          <div className="text-3xl sm:text-4xl font-mono font-black text-neutral-900 dark:text-white tracking-tight py-1">
             {currentBid.toLocaleString('tr-TR')} ₺
           </div>
-          <div className="text-xs font-mono text-gray-400 flex items-center justify-center gap-1.5 mt-2">
-            <User className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="text-xs font-mono text-neutral-600 dark:text-neutral-400 flex items-center justify-center gap-1.5 mt-2">
+            <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>En Yüksek Teklif Sahibi:</span>
-            <span className={`font-bold ${isHighestBidder ? 'text-emerald-400 underline' : 'text-amber-300'}`}>
+            <span className={`font-bold ${isHighestBidder ? 'text-emerald-600 dark:text-emerald-400 underline' : 'text-amber-600 dark:text-amber-300'}`}>
               {activeAuction.highestBidderName || 'Henüz Teklif Verilmedi'} {isHighestBidder && '(SİZ)'}
             </span>
           </div>
@@ -168,7 +168,7 @@ export default function AuctionModal() {
         {/* Teklif Verme Alanı */}
         {isSeller ? (
           <div className="space-y-3">
-            <div className="p-4 rounded-xl bg-gray-900 border border-gray-800 text-center text-gray-400 text-xs font-mono italic">
+            <div className="p-4 rounded-xl bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-center text-neutral-500 dark:text-neutral-400 text-xs font-mono italic">
               Bu mülkü siz ihaleye çıkardınız. Kendi mülkünüze teklif veremezsiniz. Diğer yatırımcıların teklifleri bekleniyor...
             </div>
             <button
@@ -182,8 +182,8 @@ export default function AuctionModal() {
         ) : (
           <div className="space-y-4 pt-1">
             <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-gray-400">Nakit Bakiyeniz:</span>
-              <span className={`font-bold ${myState.balance > currentBid ? 'text-emerald-400' : 'text-red-400'}`}>
+              <span className="text-neutral-500 dark:text-neutral-400">Nakit Bakiyeniz:</span>
+              <span className={`font-bold ${myState.balance > currentBid ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                 {myState.balance?.toLocaleString('tr-TR')} ₺
               </span>
             </div>
@@ -199,8 +199,8 @@ export default function AuctionModal() {
                     disabled={!canAfford || isHighestBidder}
                     className={`py-2.5 px-2 rounded-xl border transition-all cursor-pointer flex flex-col items-center justify-center ${
                       canAfford && !isHighestBidder
-                        ? 'bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-gray-950 border-amber-500/40 shadow-sm'
-                        : 'bg-gray-900/60 text-gray-600 border-gray-800 cursor-not-allowed opacity-50'
+                        ? 'bg-amber-50 dark:bg-amber-500/15 hover:bg-amber-100 dark:hover:bg-amber-500 text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-gray-950 border-amber-300 dark:border-amber-500/40 shadow-sm'
+                        : 'bg-neutral-100 dark:bg-neutral-900/60 text-neutral-400 dark:text-neutral-600 border-neutral-200 dark:border-neutral-800 cursor-not-allowed opacity-50'
                     }`}
                   >
                     <span>+{inc >= 1000 ? `${inc/1000}K` : inc} ₺</span>
@@ -219,9 +219,9 @@ export default function AuctionModal() {
                   onChange={(e) => setCustomBid(e.target.value)}
                   placeholder={`Min: ${(currentBid + 5000).toLocaleString('tr-TR')} ₺`}
                   disabled={isHighestBidder}
-                  className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-sm font-mono text-white placeholder-gray-600 focus:outline-none focus:border-amber-500 transition-all"
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 text-sm font-mono text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 focus:outline-none focus:border-amber-500 transition-all"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-gray-500">₺</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-neutral-400 dark:text-neutral-500">₺</span>
               </div>
               <button
                 type="submit"

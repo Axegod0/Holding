@@ -17,13 +17,15 @@ export default function App() {
   const showToast = useGameStore(state => state.showToast);
   const theme = useGameStore(state => state.theme);
 
-  // dark/light modu <html> elemanına uygula (CSS değişkenleri için)
+  // dark/light modu <html> elemanına uygula
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'light') {
-      root.classList.add('light-mode');
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.classList.remove('light-mode'); // Eski CSS değişkenleri desteğini kapatma (geçiş süreci için)
     } else {
-      root.classList.remove('light-mode');
+      root.classList.remove('dark');
+      root.classList.add('light-mode');
     }
   }, [theme]);
 
@@ -59,44 +61,38 @@ export default function App() {
       currentScreen === 'game'
         ? 'h-screen w-screen overflow-hidden'
         : 'min-h-screen flex flex-col justify-between'
-    } bg-[#0a0a0a] text-neutral-100`}>
+    } bg-neutral-100 dark:bg-[#0a0a0a] text-neutral-900 dark:text-neutral-100`}>
 
       {/* Üst Bilgi Barı — Lobi ve Bekleme ekranında görünür */}
       {currentScreen !== 'game' && (
-        <header className="border-b sticky top-0 z-40 bg-[#0a0a0a] border-neutral-800">
+        <header className="border-b sticky top-0 z-40 bg-neutral-100 dark:bg-[#0a0a0a] border-neutral-300 dark:border-neutral-800">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <span className="text-xl">🏢</span>
               <div>
-                <h1 className={`text-sm sm:text-base font-extrabold tracking-wider flex items-center gap-2 font-mono-game ${
-                  isLight ? 'text-slate-900' : 'text-white'
-                }`}>
+                <h1 className="text-sm sm:text-base font-extrabold tracking-wider flex items-center gap-2 font-mono-game text-neutral-900 dark:text-white">
                   HOLDİNG{' '}
-                  <span className={`font-normal ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`}>
+                  <span className="font-normal text-emerald-600 dark:text-emerald-400">
                     // SİMÜLASYON
                   </span>
                 </h1>
-                <p className={`text-[10px] font-mono-game ${isLight ? 'text-slate-500' : 'text-gray-400'}`}>
+                <p className="text-[10px] font-mono-game text-neutral-500 dark:text-neutral-400">
                   Gerçek Zamanlı Makroekonomi & Ticaret Simülasyonu
                 </p>
               </div>
             </div>
 
             {/* Bağlantı Göstergesi */}
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono-game ${
-              isLight
-                ? 'bg-slate-50 border-slate-200'
-                : 'bg-gray-900/90 border-gray-700'
-            }`}>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono-game bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
               <span className={`w-2.5 h-2.5 rounded-full animate-pulse ${
                 socketConnected
-                  ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+                  ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)] dark:shadow-[0_0_8px_rgba(52,211,153,0.8)]'
                   : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'
               }`} />
               <span className={`font-bold ${
                 socketConnected
-                  ? (isLight ? 'text-emerald-700' : 'text-emerald-400')
-                  : (isLight ? 'text-red-600' : 'text-red-400')
+                  ? 'text-emerald-700 dark:text-emerald-400'
+                  : 'text-red-600 dark:text-red-400'
               }`}>
                 {socketConnected ? 'SUNUCUYA BAĞLI' : 'BAĞLANTI BEKLENİYOR...'}
               </span>

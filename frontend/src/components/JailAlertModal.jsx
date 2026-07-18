@@ -12,9 +12,6 @@ export default function JailAlertModal() {
   const myId = useGameStore(state => state.myId) || socket?.id;
   const activeDiceAnimation = useGameStore(state => state.activeDiceAnimation);
   const isTokenMoving = useGameStore(state => state.isTokenMoving);
-
-  const isLight = theme === 'light';
-
   useEffect(() => {
     if (!activeJailAlert || activeDiceAnimation || isTokenMoving) return;
 
@@ -99,9 +96,7 @@ export default function JailAlertModal() {
         <div className="w-1/2 h-full bg-blue-600 animate-pulse duration-700 blur-3xl transform translate-x-1/4" />
       </div>
 
-      <div className={`relative w-full max-w-md rounded-3xl border-4 p-6 shadow-[0_0_60px_rgba(239,68,68,0.5)] transform animate-scale-up text-center overflow-hidden ${
-        isLight ? 'bg-white border-red-500 text-slate-900' : 'bg-[#111827] border-red-500/80 text-white'
-      }`}>
+      <div className="relative w-full max-w-md rounded-3xl border-4 p-6 shadow-[0_0_60px_rgba(239,68,68,0.5)] transform animate-scale-up text-center overflow-hidden bg-white dark:bg-[#1c1c1e] border-red-500 dark:border-red-500/80 text-neutral-900 dark:text-white">
         
         {/* Üst Kırmızı-Mavi Şerit */}
         <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-red-600 via-white to-blue-600 animate-pulse" />
@@ -121,18 +116,18 @@ export default function JailAlertModal() {
         </h2>
 
         {/* Oyuncu Rozeti */}
-        <div className="flex items-center justify-center gap-2 my-3 py-1.5 px-3 rounded-xl bg-slate-800/40 border border-slate-700/50 w-fit mx-auto">
+        <div className="flex items-center justify-center gap-2 my-3 py-1.5 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-700/50 w-fit mx-auto">
           <span 
             className="w-4 h-4 rounded-full shadow-sm border border-white"
             style={{ backgroundColor: jailedPlayer.color?.hex || '#F59E0B' }}
           />
-          <span className={`font-mono font-bold text-sm ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+          <span className="font-mono font-bold text-sm text-neutral-800 dark:text-neutral-200">
             {jailedPlayer.name}
           </span>
         </div>
 
         {/* Gerekçe / Açıklama */}
-        <p className={`text-xs sm:text-sm font-mono leading-relaxed px-2 mb-6 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+        <p className="text-xs sm:text-sm font-mono leading-relaxed px-2 mb-6 text-neutral-600 dark:text-neutral-300">
           <strong>{activeJailAlert.reason || 'Usulsüzlük ve Sayıştay Denetimi'}</strong>
           <br />
           {isMe ? (
@@ -159,9 +154,7 @@ export default function JailAlertModal() {
               </button>
               <button
                 onClick={() => setActiveJailAlert(null)}
-                className={`py-3.5 px-4 rounded-xl border font-mono font-bold text-xs sm:text-sm transition-all cursor-pointer ${
-                  isLight ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700' : 'bg-slate-800 hover:bg-slate-700 border-slate-600 text-slate-200'
-                }`}
+                className="py-3.5 px-4 rounded-xl border font-mono font-bold text-xs sm:text-sm transition-all cursor-pointer bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 border-neutral-200 dark:border-neutral-600 text-neutral-700 dark:text-neutral-200"
               >
                 ANLADIM
               </button>
@@ -169,7 +162,7 @@ export default function JailAlertModal() {
           ) : (
             <button
               onClick={() => setActiveJailAlert(null)}
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-white font-mono font-black text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-neutral-700 to-neutral-800 hover:from-neutral-600 hover:to-neutral-700 text-white font-mono font-black text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>DEVAM ET</span>

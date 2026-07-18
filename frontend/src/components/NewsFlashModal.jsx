@@ -10,26 +10,29 @@ export default function NewsFlashModal() {
   // Haber manşeti modalı tüm sonuçlarda gösterilmelidir
   if (!newsFlash) return null;
 
-  const isLight = theme === 'light';
   const isCrisis = !!newsFlash.isCrisis;
 
   // Dinamik Tasarım Değerleri
   const borderColor = isCrisis 
-    ? (isLight ? 'border-red-600 shadow-red-500/30 text-slate-900 bg-white' : 'border-red-500 shadow-red-500/20 text-white bg-gray-950')
-    : (isLight ? 'border-emerald-600 shadow-emerald-500/30 text-slate-900 bg-white' : 'border-emerald-500 shadow-emerald-500/20 text-white bg-gray-950');
+    ? 'bg-white dark:bg-[#1c1c1e] border-red-500 shadow-red-500/20 text-neutral-900 dark:text-white'
+    : 'bg-white dark:bg-[#1c1c1e] border-emerald-500 shadow-emerald-500/20 text-neutral-900 dark:text-white';
 
   const topBarColor = isCrisis 
     ? 'from-red-600 via-amber-500 to-red-600'
     : 'from-emerald-600 via-teal-400 to-emerald-600';
 
-  const iconBg = isCrisis ? 'bg-red-500/15 border-red-500/40 text-red-500' : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-500';
+  const iconBg = isCrisis 
+    ? 'bg-red-50 dark:bg-red-500/15 border-red-200 dark:border-red-500/40 text-red-600 dark:text-red-500' 
+    : 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-500';
   
-  const badgeStyle = isCrisis ? 'bg-red-500/15 border-red-500/40 text-red-400' : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400';
+  const badgeStyle = isCrisis 
+    ? 'bg-red-50 dark:bg-red-500/15 border-red-200 dark:border-red-500/40 text-red-600 dark:text-red-400' 
+    : 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400';
   const badgeText = isCrisis ? 'BORSA İSTANBUL • SON DAKİKA KRİZ MANŞETİ' : 'BORSA İSTANBUL • HABER GAZETE MANŞETİ';
 
   const panelBg = isCrisis
-    ? (isLight ? 'bg-red-50 border-red-200 text-red-950' : 'bg-red-950/30 border-red-500/30 text-red-200')
-    : (isLight ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-emerald-950/30 border-emerald-500/30 text-emerald-200');
+    ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-500/30 text-red-950 dark:text-red-200'
+    : 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-500/30 text-emerald-950 dark:text-emerald-200';
 
   const buttonStyle = isCrisis
     ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30'

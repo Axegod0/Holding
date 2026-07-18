@@ -10,7 +10,6 @@ export default function BorsaInvestmentModal() {
   const activeDiceAnimation = useGameStore(state => state.activeDiceAnimation);
   const isTokenMoving = useGameStore(state => state.isTokenMoving);
   const theme = useGameStore(state => state.theme);
-  const isLight = theme === 'light';
 
   const myId = useGameStore(state => state.myId) || socket?.id;
 
@@ -37,22 +36,22 @@ export default function BorsaInvestmentModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-950/85 backdrop-blur-md animate-fade-in overflow-y-auto">
-      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-gray-900 border border-emerald-500/50 rounded-3xl shadow-[0_0_50px_rgba(16,185,129,0.25)] flex flex-col relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 dark:bg-neutral-950/85 backdrop-blur-md animate-fade-in overflow-y-auto">
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-white dark:bg-[#1c1c1e] border border-emerald-400/50 dark:border-emerald-500/50 rounded-3xl shadow-xl dark:shadow-[0_0_50px_rgba(16,185,129,0.25)] flex flex-col relative">
         
         {/* Üst Vurgu Şeridi */}
         <div className="h-3.5 w-full shrink-0 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600 animate-pulse" />
 
         {/* Başlık */}
-        <div className="p-6 pb-4 border-b border-gray-800/80 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-lg shrink-0">
+        <div className="p-6 pb-4 border-b border-neutral-200 dark:border-neutral-800/80 flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-lg shrink-0">
             <TrendingUp className="w-6 h-6 animate-pulse" />
           </div>
           <div>
-            <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-emerald-400 block mb-0.5">
+            <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-emerald-600 dark:text-emerald-400 block mb-0.5">
               BORSA İSTANBUL & HALKA ARZ
             </span>
-            <h3 className="text-xl font-extrabold text-white leading-tight">
+            <h3 className="text-xl font-extrabold text-neutral-900 dark:text-white leading-tight">
               Borsaya Yatırım Yapın
             </h3>
           </div>
@@ -60,23 +59,23 @@ export default function BorsaInvestmentModal() {
 
         {/* Detaylar */}
         <div className="p-6 space-y-4">
-          <div className="p-4 rounded-2xl bg-gray-950/90 border border-gray-800 space-y-3 text-xs font-mono">
-            <p className="text-gray-300">
+          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-950/90 border border-neutral-200 dark:border-neutral-800 space-y-3 text-xs font-mono">
+            <p className="text-neutral-600 dark:text-neutral-300">
               Halka Arz Terminali veya Borsa Karesine ulaştınız. Nakit birikiminizi değerlendirme fırsatı:
             </p>
             <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25">
-                <span className="text-emerald-400 font-bold block mb-0.5">📈 %55 İhtimal</span>
-                Yatırdığınız para <strong className="text-white">2 KATINA</strong> katlanır.
+              <div className="p-2.5 rounded-xl bg-emerald-100/50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/25">
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold block mb-0.5">📈 %55 İhtimal</span>
+                Yatırdığınız para <strong className="text-neutral-900 dark:text-white">2 KATINA</strong> katlanır.
               </div>
-              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/25">
-                <span className="text-red-400 font-bold block mb-0.5">📉 %45 İhtimal</span>
-                Yatırımınızın <strong className="text-white">%50'si</strong> erir.
+              <div className="p-2.5 rounded-xl bg-red-100/50 dark:bg-red-500/10 border border-red-300 dark:border-red-500/25">
+                <span className="text-red-600 dark:text-red-400 font-bold block mb-0.5">📉 %45 İhtimal</span>
+                Yatırımınızın <strong className="text-neutral-900 dark:text-white">%50'si</strong> erir.
               </div>
             </div>
-            <div className="pt-2.5 border-t border-gray-800 flex items-center justify-between text-gray-400">
+            <div className="pt-2.5 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between text-neutral-500 dark:text-neutral-400">
               <span>Güncel Nakitiniz:</span>
-              <span className="text-emerald-400 font-bold">{myState.balance?.toLocaleString('tr-TR')} ₺</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{myState.balance?.toLocaleString('tr-TR')} ₺</span>
             </div>
           </div>
 
@@ -88,7 +87,7 @@ export default function BorsaInvestmentModal() {
                 type="button"
                 onClick={() => handleInvest(amt)}
                 disabled={loading || amt > myState.balance}
-                className="py-2.5 px-2 rounded-xl bg-gray-850 hover:bg-emerald-950/40 text-emerald-400 border border-gray-700 hover:border-emerald-500/40 font-mono text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="py-2.5 px-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-neutral-200 dark:border-neutral-700 hover:border-emerald-200 dark:hover:border-emerald-500/40 font-mono text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {amt?.toLocaleString('tr-TR')} ₺
               </button>
@@ -97,7 +96,7 @@ export default function BorsaInvestmentModal() {
 
           {/* Özel Tutar Girişi */}
           <div className="space-y-1.5">
-            <span className="text-[10px] font-mono text-gray-500 uppercase block tracking-wider">Veya Özel Miktar Girin (₺):</span>
+            <span className="text-[10px] font-mono text-neutral-500 uppercase block tracking-wider">Veya Özel Miktar Girin (₺):</span>
             <div className="relative">
               <input
                 type="number"
@@ -105,19 +104,19 @@ export default function BorsaInvestmentModal() {
                 max={myState.balance}
                 value={customAmount}
                 onChange={e => setCustomAmount(e.target.value)}
-                className="w-full bg-gray-950 border border-gray-700 hover:border-emerald-500 focus:border-emerald-400 rounded-xl p-3 pl-7 text-xs text-white font-mono placeholder-gray-600 focus:outline-none"
+                className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-700 hover:border-emerald-400 dark:hover:border-emerald-500 focus:border-emerald-500 dark:focus:border-emerald-400 rounded-xl p-3 pl-7 text-xs text-neutral-900 dark:text-white font-mono placeholder-neutral-400 dark:placeholder-neutral-600 focus:outline-none"
               />
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-xs">₺</span>
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-500 text-xs">₺</span>
             </div>
           </div>
         </div>
 
         {/* Butonlar */}
-        <div className="p-6 pt-2 border-t border-gray-800/80 flex items-center gap-3">
+        <div className="p-6 pt-2 border-t border-neutral-200 dark:border-neutral-800/80 flex items-center gap-3">
           <button
             onClick={handleSkip}
             disabled={loading}
-            className="flex-1 py-3.5 px-4 rounded-xl bg-gray-800 hover:bg-gray-750 text-gray-400 hover:text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-gray-700 disabled:opacity-50"
+            className="flex-1 py-3.5 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-neutral-200 dark:border-neutral-700 disabled:opacity-50"
           >
             <Ban className="w-4 h-4" />
             <span>Yatırım Yapma (Pas Geç)</span>

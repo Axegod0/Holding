@@ -3,6 +3,8 @@
 
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ─── CSS Değişkenleri (Tema Sistemi) ─────────────────── */
 @layer base {
   :root {

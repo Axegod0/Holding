@@ -35,12 +35,12 @@ export default function Home() {
         {/* Başlık & İkon */}
         <div className="text-center mb-6 sm:mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500/20 to-blue-500/20 border border-emerald-500/30 mb-4 shadow-[0_0_20px_rgba(16,185,129,0.15)]">
-            <TrendingUp className="w-7 h-7 text-emerald-400" />
+            <TrendingUp className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-white mb-1">
+          <h2 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white mb-1">
             Finansal Ticaret Terminali
           </h2>
-          <p className="text-sm text-gray-400 font-mono">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 font-mono">
             Çok Oyunculu Ekonomi Simülasyonu - Ağ Girişi
           </p>
         </div>
@@ -54,11 +54,11 @@ export default function Home() {
 
         {/* Oyuncu Adı Input */}
         <div className="mb-6">
-          <label className="block text-xs font-mono font-semibold text-gray-300 uppercase tracking-wider mb-2">
+          <label className="block text-xs font-mono font-semibold text-neutral-600 dark:text-neutral-300 uppercase tracking-wider mb-2">
             OYUNCU İSMİ (NICKNAME)
           </label>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400 dark:text-neutral-500">
               <User className="w-4 h-4 text-emerald-400" />
             </div>
             <input
@@ -67,20 +67,20 @@ export default function Home() {
               onChange={(e) => setPlayerName(e.target.value)}
               placeholder="Örn: Yatırımcı Ali"
               maxLength={20}
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-900/90 border border-gray-700 text-white placeholder-gray-500 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-900/90 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 text-sm font-medium focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
             />
           </div>
         </div>
 
         {/* Sekme Butonları (Oda Oluştur vs Odaya Katıl) */}
-        <div className="grid grid-cols-2 gap-2 p-1.5 rounded-xl bg-gray-900/80 border border-gray-800 mb-6">
+        <div className="grid grid-cols-2 gap-2 p-1.5 rounded-xl bg-neutral-100 dark:bg-neutral-900/80 border border-neutral-200 dark:border-neutral-800 mb-6">
           <button
             type="button"
             onClick={() => setActiveTab('create')}
             className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-mono text-xs font-semibold tracking-wider transition-all ${
               activeTab === 'create'
-                ? 'bg-emerald-500 text-gray-950 shadow-lg shadow-emerald-500/25'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
             }`}
           >
             <PlusCircle className="w-4 h-4" />
@@ -91,8 +91,8 @@ export default function Home() {
             onClick={() => setActiveTab('join')}
             className={`flex items-center justify-center gap-2 py-2.5 rounded-lg font-mono text-xs font-semibold tracking-wider transition-all ${
               activeTab === 'join'
-                ? 'bg-blue-500 text-gray-950 shadow-lg shadow-blue-500/25'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
             }`}
           >
             <LogIn className="w-4 h-4" />
@@ -103,8 +103,8 @@ export default function Home() {
         {/* Tab 1: Oda Oluşturma Formu */}
         {activeTab === 'create' && (
           <form onSubmit={handleCreateSubmit} className="space-y-4">
-            <div className="p-4 rounded-xl bg-gray-900/60 border border-gray-800/80 text-xs text-gray-400 leading-relaxed font-mono">
-              <span className="text-emerald-400 font-bold block mb-1">HOST YETKİSİ ALACAKSINIZ</span>
+            <div className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-200 dark:border-neutral-800/80 text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-mono">
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold block mb-1">HOST YETKİSİ ALACAKSINIZ</span>
               Yeni bir lobi oluşturarak oda kurucusu olur ve 6 haneli davet kodunu diğer yatırımcılarla paylaşabilirsiniz (2-6 Oyuncu).
             </div>
 
@@ -129,11 +129,11 @@ export default function Home() {
         {activeTab === 'join' && (
           <form onSubmit={handleJoinSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-mono font-semibold text-gray-300 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-mono font-semibold text-neutral-600 dark:text-neutral-300 uppercase tracking-wider mb-2">
                 6 HANELİ ODA KODU
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-400 dark:text-neutral-500">
                   <KeyRound className="w-4 h-4 text-blue-400" />
                 </div>
                 <input
@@ -142,7 +142,7 @@ export default function Home() {
                   onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
                   placeholder="Örn: A7B9X2"
                   maxLength={6}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-900/90 border border-gray-700 text-white font-mono text-base font-bold tracking-widest placeholder-gray-600 uppercase focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-900/90 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white font-mono text-base font-bold tracking-widest placeholder-neutral-400 dark:placeholder-neutral-600 uppercase focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                 />
               </div>
             </div>
@@ -165,9 +165,9 @@ export default function Home() {
         )}
 
         {/* Alt Bilgi */}
-        <div className="mt-8 pt-4 border-t border-gray-800/80 flex items-center justify-between text-xs text-gray-500 font-mono">
+        <div className="mt-8 pt-4 border-t border-neutral-200 dark:border-neutral-800/80 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-500 font-mono">
           <span className="flex items-center gap-1.5">
-            <BarChart3 className="w-3.5 h-3.5 text-emerald-400" />
+            <BarChart3 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             Kapasite: 2 - 6 Oyuncu
           </span>
           <span>Gerçek Zamanlı Socket.io</span>

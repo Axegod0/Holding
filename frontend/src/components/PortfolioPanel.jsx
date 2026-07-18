@@ -12,7 +12,6 @@ export default function PortfolioPanel() {
   const startAuction = useGameStore(state => state.startAuction);
   const loading = useGameStore(state => state.loading);
   const theme = useGameStore(state => state.theme);
-  const isLight = theme === 'light';
 
   const propertyOwnership = gameState?.propertyOwnership || {};
   const myId = useGameStore(state => state.myId) || socket?.id;
@@ -29,21 +28,19 @@ export default function PortfolioPanel() {
   };
 
   return (
-    <div className={`rounded-2xl p-5 border space-y-4 transition-colors ${
-      isLight ? 'bg-white border-slate-300 text-slate-900 shadow-md' : 'glass-panel border-gray-800 text-white'
-    }`}>
-      <div className={`flex items-center justify-between pb-2 border-b ${isLight ? 'border-slate-200' : 'border-gray-800/80'}`}>
-        <h4 className={`text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 ${isLight ? 'text-slate-800' : 'text-gray-300'}`}>
-          <Building2 className="w-4 h-4 text-emerald-400" />
+    <div className="rounded-2xl p-5 border space-y-4 transition-colors bg-white dark:bg-[#1c1c1e] border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-white shadow-md dark:shadow-none">
+      <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800/80">
+        <h4 className="text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 text-neutral-800 dark:text-neutral-300">
+          <Building2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
           MÜLK PORTFÖYÜ VE İNŞAAT YÖNETİMİ
         </h4>
-        <span className={`text-[11px] font-mono ${isLight ? 'text-slate-500' : 'text-gray-500'}`}>
+        <span className="text-[11px] font-mono text-neutral-500">
           {Object.keys(propertyOwnership).length} / 22 Şehir Satıldı
         </span>
       </div>
 
       {players.length === 0 && (
-        <div className="text-gray-600 italic text-center py-6 text-xs font-mono">
+        <div className="text-neutral-500 italic text-center py-6 text-xs font-mono">
           Yatırımcı bilgileri yükleniyor...
         </div>
       )}
@@ -70,8 +67,8 @@ export default function PortfolioPanel() {
             key={player.id} 
             className={`p-4 rounded-xl border transition-all space-y-3 ${
               isMe 
-                ? (isLight ? 'bg-emerald-50/80 border-emerald-400 text-slate-900' : 'bg-gray-900/90 border-emerald-500/40')
-                : (isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-gray-950/60 border-gray-800/80')
+                ? 'bg-emerald-50/80 dark:bg-emerald-950/10 border-emerald-400 dark:border-emerald-500/40 text-neutral-900 dark:text-white'
+                : 'bg-neutral-50 dark:bg-neutral-950/60 border-neutral-200 dark:border-neutral-800/80 text-neutral-800 dark:text-neutral-200'
             }`}
           >
             {/* Oyuncu Üst Bilgisi */}
@@ -81,21 +78,21 @@ export default function PortfolioPanel() {
                   className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm"
                   style={{ backgroundColor: player.color?.hex || '#10B981' }}
                 />
-                <span className={`font-bold text-sm ${isLight ? 'text-slate-900' : 'text-white'}`}>{player.name}</span>
+                <span className="font-bold text-sm">{player.name}</span>
                 {isMe && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30">
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-200 dark:border-emerald-500/30">
                     SİZİN PORTFÖYÜNÜZ
                   </span>
                 )}
               </div>
-              <div className={`text-xs font-mono font-bold ${isLight ? 'text-slate-500' : 'text-gray-400'}`}>
+              <div className="text-xs font-mono font-bold text-neutral-500 dark:text-neutral-400">
                 {myProperties.length} Tapu
               </div>
             </div>
 
             {/* Tapu Kartları Listesi */}
             {myProperties.length === 0 ? (
-              <div className={`text-[11px] font-mono italic py-1 pl-5 ${isLight ? 'text-slate-500' : 'text-gray-600'}`}>
+              <div className="text-[11px] font-mono italic py-1 pl-5 text-neutral-500">
                 Henüz satın alınmış bir şehir tapusu yok.
               </div>
             ) : (
@@ -108,9 +105,7 @@ export default function PortfolioPanel() {
                   return (
                     <div 
                       key={prop.id}
-                      className={`p-3 rounded-xl border flex flex-col justify-between space-y-2 relative overflow-hidden ${
-                        isLight ? 'bg-white border-slate-300 shadow-sm text-slate-900' : 'bg-gray-950 border-gray-800 text-white'
-                      }`}
+                      className="p-3 rounded-xl border flex flex-col justify-between space-y-2 relative overflow-hidden bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 shadow-sm text-neutral-900 dark:text-white"
                     >
                       <div 
                         className="absolute top-0 left-0 right-0 h-1.5"
@@ -119,10 +114,10 @@ export default function PortfolioPanel() {
 
                       <div className="pt-1 flex items-start justify-between gap-1">
                         <div>
-                          <div className={`text-[10px] font-mono uppercase ${isLight ? 'text-slate-500' : 'text-gray-500'}`}>
+                          <div className="text-[10px] font-mono uppercase text-neutral-500">
                             #{prop.id} • {hasMonopoly ? '⚡ TEKEL (MONOPOLY)' : 'ŞEHİR'}
                           </div>
-                          <div className={`text-xs font-bold mt-0.5 ${isLight ? 'text-slate-900' : 'text-white'} flex items-center gap-1`}>
+                          <div className="text-xs font-bold mt-0.5 flex items-center gap-1">
                             {prop.customName || prop.name}
                             {prop.isMortgaged && <span className="text-red-500 text-[10px]" title="Banka İpotekli">🔒</span>}
                           </div>
@@ -136,12 +131,12 @@ export default function PortfolioPanel() {
                               OTEL
                             </span>
                           ) : prop.houses > 0 ? (
-                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono font-bold shadow-sm">
-                              <Home className="w-3 h-3 fill-emerald-300" />
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/40 text-[10px] font-mono font-bold shadow-sm">
+                              <Home className="w-3 h-3 text-emerald-500 dark:fill-emerald-300" />
                               {prop.houses} Ev
                             </span>
                           ) : (
-                            <span className="text-[10px] font-mono text-gray-600">Arsa (0 Ev)</span>
+                            <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-600">Arsa (0 Ev)</span>
                           )}
                         </div>
                       </div>
@@ -149,21 +144,17 @@ export default function PortfolioPanel() {
                       {/* Ortak Yönet Butonu (Yönetim Pop-up'ı) */}
                       <button
                         onClick={() => setActivePropertyManagement(prop)}
-                        className={`w-full py-1.5 px-2 rounded-lg font-mono font-bold text-[10px] sm:text-[11px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all ${
-                          isLight 
-                            ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700' 
-                            : 'bg-gray-800 hover:bg-gray-700 border-gray-700 text-gray-200'
-                        } border cursor-pointer`}
+                        className="w-full py-1.5 px-2 rounded-lg font-mono font-bold text-[10px] sm:text-[11px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 border cursor-pointer"
                       >
                         <span>⚙️ Detaylı Yönet</span>
                       </button>
 
                       {/* İnşaat (Ev/Otel Dik) ile İhale ve Borç Acil Satış Butonları - Sadece Benim Mülkümse */}
                       {isMe && (
-                        <div className="pt-2 border-t border-gray-800/80 space-y-2">
+                        <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800/80 space-y-2">
                           <div>
                             {!hasMonopoly ? (
-                              <div className="text-[10px] font-mono text-gray-500 flex items-center gap-1">
+                              <div className="text-[10px] font-mono text-neutral-500 flex items-center gap-1">
                                 <AlertCircle className="w-3 h-3 text-amber-500 shrink-0" />
                                 <span>İnşaat için grup tekel olmalı</span>
                               </div>
@@ -176,10 +167,10 @@ export default function PortfolioPanel() {
                               <button
                                 onClick={() => buildHouse(prop.id)}
                                 disabled={!canAffordHouse || loading}
-                                className={`w-full py-1.5 px-2 rounded-lg font-mono font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                                className={`w-full py-1.5 px-2 rounded-lg font-mono font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all border ${
                                   canAffordHouse
-                                    ? 'bg-emerald-500/15 hover:bg-emerald-500 text-emerald-300 hover:text-gray-950 border border-emerald-500/30 cursor-pointer shadow-sm'
-                                    : 'bg-gray-800/80 text-gray-500 border border-gray-800 cursor-not-allowed'
+                                    ? 'bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500 text-emerald-600 dark:text-emerald-300 dark:hover:text-neutral-950 border-emerald-200 dark:border-emerald-500/30 cursor-pointer shadow-sm'
+                                    : 'bg-neutral-100 dark:bg-neutral-800/80 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800 cursor-not-allowed'
                                 }`}
                                 title={`Ev/Otel bedeli: ${prop.housePrice?.toLocaleString('tr-TR')} ₺`}
                               >
@@ -204,8 +195,8 @@ export default function PortfolioPanel() {
                               disabled={loading}
                               className={`py-1.5 px-1 rounded-lg flex items-center justify-center gap-1 transition-all border ${
                                 prop.isMortgaged
-                                  ? 'bg-gray-800/40 text-gray-500 border-gray-800 cursor-not-allowed'
-                                  : 'bg-red-950/40 hover:bg-red-900/60 text-red-300 border-red-500/30 cursor-pointer'
+                                  ? 'bg-neutral-100 dark:bg-neutral-800/40 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800 cursor-not-allowed'
+                                  : 'bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-300 border-red-200 dark:border-red-500/30 cursor-pointer'
                               }`}
                               title={prop.isMortgaged ? 'İpotekli mülk satılamaz. Önce ipoteği kaldırın.' : 'Devlete -%30 zararla acil nakit satışı yap'}
                             >
@@ -222,8 +213,8 @@ export default function PortfolioPanel() {
                               disabled={loading}
                               className={`py-1.5 px-1 rounded-lg flex items-center justify-center gap-1 transition-all border ${
                                 prop.isMortgaged
-                                  ? 'bg-gray-800/40 text-gray-500 border-gray-800 cursor-not-allowed'
-                                  : 'bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border-amber-500/30 cursor-pointer'
+                                  ? 'bg-neutral-100 dark:bg-neutral-800/40 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800 cursor-not-allowed'
+                                  : 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-600 dark:text-amber-300 border-amber-200 dark:border-amber-500/30 cursor-pointer'
                               }`}
                               title={prop.isMortgaged ? 'İpotekli mülk ihaleye çıkarılamaz. Önce ipoteği kaldırın.' : 'Mülkü %65 açılış bedeliyle canlı 30 sn ihaleye çıkar'}
                             >
