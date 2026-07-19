@@ -544,7 +544,8 @@ export const useGameStore = create((set, get) => ({
       get().showToast(`İhale Başladı: ${auction.propertyName}! Teklif verebilirsiniz.`, 'info', 4000);
     });
 
-    socket.on('server:autoAuctionNotice', ({ message }) => {
+    socket.on('server:autoAuctionNotice', (data) => {
+      const message = typeof data === 'string' ? data : data?.message;
       get().showToast(message || '10. Tur Özelleştirmeleri Başladı! Sahipsiz özel işletmeler sırayla açık ihaleye çıkacak.', 'warning', 6000);
       get().addLog(`⚡ ${message || '10. Tur Özelleştirmeleri Başladı!'}`, 'warning');
     });
@@ -599,11 +600,13 @@ export const useGameStore = create((set, get) => ({
 
 
 
-    socket.on('server:log', ({ message, type = 'info' }) => {
-      get().addLog(message, type);
+    socket.on('server:log', (data) => {
+      const msg = typeof data === 'string' ? data : (data?.message || data?.text || '');
+      if (msg) get().addLog(msg, data?.type || 'info');
     });
 
-    socket.on('server:error', ({ message }) => {
+    socket.on('server:error', (data) => {
+      const message = typeof data === 'string' ? data : (data?.message || 'Sunucu hatası.');
       get().showToast(message, 'error');
     });
 
@@ -656,8 +659,9 @@ export const useGameStore = create((set, get) => ({
     });
 
     // Sunucu logları
-    socket.on('server:logMessage', ({ message, type = 'info' }) => {
-      get().addLog(message, type);
+    socket.on('server:logMessage', (data) => {
+      const msg = typeof data === 'string' ? data : (data?.message || data?.text || '');
+      if (msg) get().addLog(msg, data?.type || 'info');
     });
   },
 
