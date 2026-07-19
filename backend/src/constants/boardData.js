@@ -12,7 +12,7 @@ export const BOARD_DATA = [
   // ───────────────── ALT KENAR (Sol → Sağ): 0 → 13 ─────────────────
   {
     id: 0, type: 'start',
-    name: 'Başlangıç / Borsa İstanbul',
+    name: 'Başlangıç',
     subtitle: 'Maaş: 15.000 ₺ + Net Varlık × %5',
     color: '#10B981'
   },
@@ -55,7 +55,7 @@ export const BOARD_DATA = [
   },
   {
     id: 7, type: 'chance',
-    name: 'Şans Kartı', subtitle: 'Piyasa Haberi',
+    name: 'Şans Kartı',
     color: '#F59E0B'
   },
   {

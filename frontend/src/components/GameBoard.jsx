@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import useGameStore from '../store/gameStore.js';
 import socket from '../services/socket.js';
+import { getSquareImage } from '../constants/boardImages.js';
 import PropertyModal from './PropertyModal.jsx';
 import PortfolioPanel from './PortfolioPanel.jsx';
 import TradeOfferModal from './TradeOfferModal.jsx';
@@ -254,7 +255,7 @@ export default function GameBoard() {
               {/* Üst Kısım: Şehir Görseli ve Maskeleme */}
               <div 
                 className="h-[65%] w-full bg-cover bg-center relative"
-                style={{ backgroundImage: `url('https://picsum.photos/seed/${square.id + 100}/300/300')` }}
+                style={{ backgroundImage: `url('${getSquareImage(square.id)}')` }}
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-0"></div>
                 
