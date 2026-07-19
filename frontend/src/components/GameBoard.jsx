@@ -236,87 +236,85 @@ export default function GameBoard() {
                 gridColumnStart: coords.gridColumnStart,
                 gridRowStart: coords.gridRowStart
               }}
-              className={`relative p-1 sm:p-1.5 rounded-xl border transition-all flex flex-col justify-between overflow-hidden shadow-sm dark:shadow-lg dark:shadow-black/50 bg-white dark:bg-[#1c1c1e] ${
-                square.id === 20 || square.id === 13 || square.type === 'bank' || square.type === 'jail' ? 'cursor-pointer hover:border-neutral-300 dark:hover:border-neutral-700' : ''
-              } ${
-                playersOnSquare.length > 0
-                  ? 'border-neutral-400 bg-neutral-200 dark:bg-[#262626] z-10'
-                  : ownerPlayer
-                  ? 'border-neutral-300 dark:border-neutral-700'
-                  : 'border-neutral-200 dark:border-white/5 hover:border-neutral-300 dark:hover:border-neutral-600'
-              } ${isCorner ? 'bg-neutral-50 dark:bg-neutral-900 font-bold' : ''}`}
+              className={`relative flex flex-col overflow-hidden rounded-2xl bg-black border border-white/10 transition-transform duration-300 cursor-pointer ${
+                playersOnSquare.length > 0 ? 'z-20 scale-105' : 'hover:scale-105 hover:z-10'
+              }`}
             >
-              {/* Kare Renk Şeridi (Üstte İnce) */}
-              {square.color && (
-                <div 
-                  className="absolute top-0 left-0 right-0 h-1.5 z-10 opacity-90"
-                  style={{ backgroundColor: square.color }}
-                />
-              )}
-
-              {/* Üst Kısım: ID ve Renk Sahibi */}
-              <div className="relative z-10 flex items-center justify-between text-[9px] sm:text-[10px] font-mono pt-1 px-1 text-neutral-500 dark:text-neutral-400">
-                <span className="font-bold text-neutral-900 dark:text-neutral-100">#{square.id}</span>
-                {ownerPlayer && ownership.isMortgaged && (
-                  <div className="w-2 h-2 rounded-full shadow-sm bg-red-500 animate-pulse" title="İpotekli" />
-                )}
-              </div>
-
-              {/* Sahiplik Arka Plan Katmanı */}
+              {/* Sahiplik Çerçevesi (Opsiyonel Parlama) */}
               {ownerPlayer && !ownership.isMortgaged && (
                 <div 
-                  className="absolute inset-0 z-0 pointer-events-none transition-colors duration-500"
+                  className="absolute inset-0 z-10 pointer-events-none rounded-2xl"
                   style={{
-                    backgroundColor: `${ownerPlayer.color?.hex}26`,
-                    boxShadow: `inset 0 0 15px ${ownerPlayer.color?.hex}33`
+                    boxShadow: `inset 0 0 12px ${ownerPlayer.color?.hex}40`,
+                    border: `1.5px solid ${ownerPlayer.color?.hex}80`
                   }}
                 />
               )}
 
-              {/* Kare Adı (Ortada, bold, nötr renk) */}
-              <div className="flex-1 flex flex-col items-center justify-center relative z-10 my-0.5 px-0.5">
-                <div className="text-[9px] sm:text-[10px] font-bold text-center leading-tight line-clamp-2 text-neutral-900 dark:text-neutral-100 uppercase">
-                  {(square.type === 'TRADE' && ownership?.customName) ? ownership.customName : square.name}
-                </div>
+              {/* Üst Kısım: Şehir Görseli ve Maskeleme */}
+              <div 
+                className="h-[65%] w-full bg-cover bg-center relative"
+                style={{ backgroundImage: `url('https://picsum.photos/seed/${square.id + 100}/300/300')` }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-0"></div>
+                
+                {/* Modern Rozet (Renk Grubu) */}
+                {square.color && (
+                  <div className="absolute top-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/60 backdrop-blur-md px-1.5 py-0.5 z-20 border border-white/10">
+                    <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: square.color, boxShadow: `0 0 4px ${square.color}` }}></div>
+                    <span className="text-[7px] sm:text-[8px] font-bold text-white/90">#{square.id}</span>
+                  </div>
+                )}
+
+                {/* İpotek Rozeti */}
+                {ownerPlayer && ownership.isMortgaged && (
+                  <div className="absolute top-1.5 right-1.5 flex items-center rounded-full bg-red-500/80 backdrop-blur-md px-1.5 py-0.5 z-20">
+                    <span className="text-[7px] sm:text-[8px] font-bold text-white uppercase">İpotekli</span>
+                  </div>
+                )}
               </div>
 
-              {/* Fiyat (En altta, ufak font, nötr) */}
-              <div className="relative z-10 w-full text-center pb-0.5">
+              {/* Alt Kısım: İsim ve Fiyat */}
+              <div className="h-[35%] w-full flex flex-col items-center justify-center bg-black pb-1.5 px-1 z-10">
+                <div className="text-white font-bold text-[8px] sm:text-[10px] md:text-[11px] text-center leading-tight line-clamp-1 uppercase">
+                  {(square.type === 'TRADE' && ownership?.customName) ? ownership.customName : square.name}
+                </div>
                 {(square.price || square.subtitle) && (
-                  <div className="text-[8px] sm:text-[9px] font-mono text-neutral-500 dark:text-neutral-400 font-bold truncate">
+                  <div className="text-neutral-400 text-[7px] sm:text-[8px] md:text-[9px] mt-0.5 text-center truncate w-full">
                     {square.price ? `${square.price?.toLocaleString('tr-TR')} ₺` : square.subtitle}
                   </div>
                 )}
               </div>
 
-              {/* Bu Karedeki Piyonlar (Büyük Boyut & Çakışma Önleyici Yan Yana Yerleşim) */}
+              {/* Bu Karedeki Piyonlar (Tam Merkeze Yerleştirme) */}
               {playersOnSquare.length > 0 && (
-                <div className={`mt-auto pt-1 border-t flex items-center justify-center ${
-                  playersOnSquare.length > 1 ? 'gap-1 -space-x-1.5 hover:space-x-1 transition-all duration-300' : 'gap-1'
-                } ${isLight ? 'border-neutral-200' : 'border-neutral-800/60'}`}>
-                  {playersOnSquare.map((p, pIdx) => {
-                    const initials = p.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-                    const isMoving = displayPositions[p.id] !== undefined && displayPositions[p.id] !== (gameState?.playersState[p.id]?.position || 0);
-                    const verticalOffset = playersOnSquare.length > 1 ? (pIdx % 2 === 0 ? '-translate-y-0.5' : 'translate-y-0.5') : '';
+                <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+                  <div className={`flex items-center justify-center ${
+                    playersOnSquare.length > 1 ? '-space-x-1 sm:-space-x-2' : ''
+                  }`}>
+                    {playersOnSquare.map((p, pIdx) => {
+                      const isMoving = displayPositions[p.id] !== undefined && displayPositions[p.id] !== (gameState?.playersState[p.id]?.position || 0);
+                      const verticalOffset = playersOnSquare.length > 1 ? (pIdx % 2 === 0 ? '-translate-y-1' : 'translate-y-1') : '';
 
-                    return (
-                      <div
-                        key={p.id}
-                        className={`group relative flex items-center justify-center w-6 sm:w-8 h-6 sm:h-8 rounded-full border-2 border-white/90 shadow-[0_3px_10px_rgba(0,0,0,0.6)] font-mono font-black text-[10px] sm:text-xs text-gray-950 transition-all duration-300 transform hover:scale-125 hover:z-50 cursor-pointer ${verticalOffset} ${isMoving ? 'animate-bounce ring-2 ring-amber-400 ring-offset-1' : ''}`}
-                        style={{ 
-                          backgroundColor: p.color?.hex || '#34D399',
-                          zIndex: 20 + pIdx
-                        }}
-                      >
-                        <Rocket className="w-3 sm:w-4 h-3 sm:h-4 text-gray-950 drop-shadow-sm" />
-                        
-                        {/* İsim Tooltip */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded-md bg-gray-950 text-white font-mono text-[9px] font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[60] shadow-xl border border-gray-700">
-                          {p.name} ({p.color?.name})
+                      return (
+                        <div
+                          key={p.id}
+                          className={`group relative flex items-center justify-center w-5 sm:w-7 h-5 sm:h-7 rounded-full border border-white/80 shadow-[0_3px_10px_rgba(0,0,0,0.8)] font-mono font-black text-[9px] sm:text-[10px] text-gray-950 transition-all duration-300 pointer-events-auto ${verticalOffset} ${isMoving ? 'animate-bounce ring-2 ring-amber-400' : ''}`}
+                          style={{ 
+                            backgroundColor: p.color?.hex || '#34D399',
+                            zIndex: 30 + pIdx
+                          }}
+                        >
+                          <Rocket className="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5 text-gray-950 drop-shadow-sm" />
+                          
+                          {/* İsim Tooltip */}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 rounded-md bg-gray-950/90 backdrop-blur-sm text-white font-mono text-[9px] font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-[60] shadow-xl border border-gray-700">
+                            {p.name}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
