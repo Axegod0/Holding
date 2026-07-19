@@ -10,7 +10,7 @@ export const BOARD_IMAGES = {
 
   // ALT KENAR (0 - 13)
   0: 'https://i.pinimg.com/736x/25/83/25/258325e218093f78599368d65312663d.jpg', // Başlangıç
-  1: '', // Yozgat
+  1: 'https://kalkinmagalerisi.org.tr/_next/image?url=https%3A%2F%2Fkalkinmagalerisi.org.tr%2F%2Ffiles%2Fupload%2Fimages%2Fprocessed%2Fo_1gf2s7jim426g6f1vhojfh52t7.jpg&w=3840&q=75', // Yozgat
   2: '', // Şans Kartı
   3: '', // Kars
   4: '', // Hazine Vergisi
