@@ -16,7 +16,7 @@ export const BOARD_IMAGES = {
   4: 'https://ziraatodasi.gen.tr/wp-content/uploads/2021/01/vergi-2.jpg', // Hazine Vergisi
   5: 'https://c4.wallpaperflare.com/wallpaper/691/692/932/the-city-work-the-situation-ships-wallpaper-preview.jpg', // Uluslararası Liman
   6: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSRHesog6U780opbVRwqcuZRC8ieZ4SfXluz3RShINT0rMiPvtGaml0D0I&s=10', // Edirne
-  7: 'https://creativegroup-blog-prd-eu-west-1-recharge-blog.s3.eu-west-1.amazonaws.com/blog/wp-content/uploads/2023/04/17125540/Does_an_anonymous_SIM_card_exist_RE.jpg', // Şans Kartı
+  7: 'https://www.savunmatr.com/wp-content/uploads/2024/12/dark-web-2.jpg', // İllegal
   8: 'https://www.tekirdag.bel.tr/content/WebSource/image/slide/1.jpg', // Tekirdağ
   9: 'https://surmenosgb.com.tr/wp-content/uploads/2024/03/canakkale-zaferi.jpg', // Çanakkale
   10: 'https://www.samsunharitasi.com/Icerik/Large/www.samsunharitasi.com_2_samsun-tarihi_WK9G11LZDLHC.png', // Samsun
@@ -41,7 +41,7 @@ export const BOARD_IMAGES = {
   25: 'https://www.guvenvillas.com.tr/assets/images/blog/big/mugla-gezi_1.jpg', // Muğla
   26: 'https://www.etstur.com/letsgo/wp-content/uploads/2026/07/01-mersin-letsgo.jpg', // Mersin
   27: 'https://www.tatilcity.net/uploads/0000/1/2024/10/04/bursa.jpg', // Bursa
-  28: 'https://creativegroup-blog-prd-eu-west-1-recharge-blog.s3.eu-west-1.amazonaws.com/blog/wp-content/uploads/2023/04/17125540/Does_an_anonymous_SIM_card_exist_RE.jpg', // Şans Kartı
+  28: 'https://www.savunmatr.com/wp-content/uploads/2024/12/dark-web-2.jpg', // İllegal
   29: 'https://cdn.britannica.com/25/93825-050-D1300547/collection-newspapers.jpg', // Medya Şirketi
   30: 'https://t3.ftcdn.net/jpg/05/71/76/86/360_F_571768620_I0OKBXP3S3KoAAOCZ59GrBjiG8SysCfY.jpg', // Antalya
   31: 'https://images.unsplash.com/photo-1701428588034-5893b2512a68?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8aXptaXIlMjB0dXJrZXl8ZW58MHx8MHx8fDA%3D', // İzmir
