@@ -670,7 +670,6 @@ export function rollDice(socketId) {
   }
 
   const diceTotal = dice1 + dice2;
-  checkPlayerQuestOnRoll(room, socketId, diceTotal);
   const isDouble = dice1 === dice2;
 
   // Hapis (Jail) Kontrolü
