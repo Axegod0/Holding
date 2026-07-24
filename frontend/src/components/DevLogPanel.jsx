@@ -69,17 +69,35 @@ export default function DevLogPanel() {
     window.addEventListener('unhandledrejection', promiseRejectionHandler);
 
     // Socket.io İzlemesi
-    const onConnectError = (err) => addLog('error', `SOCKET ERROR (connect_error): Bağlantı kurulamadı - ${err.message}`);
-    const onDisconnect = (reason) => addLog('error', `SOCKET ERROR (disconnect): Sunucuyla bağlantı koptu - Neden: ${reason}`);
+    const onConnectError = (err) => {
+      // Polling hatalarını info olarak göster (çünkü websocket'e denemeye devam ediyor olabilir)
+      if (err.message === 'xhr poll error') {
+        addLog('warn', `Bağlantı deneniyor (xhr poll error)`);
+      } else {
+        addLog('error', `SOCKET ERROR (connect_error): Bağlantı kurulamadı - ${err.message}`);
+      }
+    };
+    
+    const onDisconnect = (reason) => {
+      // Normal sayılabilen ve otomatik yenilenen kopmaları hata olarak gösterme
+      if (reason === 'transport error' || reason === 'transport close' || reason === 'ping timeout') {
+        addLog('warn', `Soket bağlantısı beklemeye alındı (Neden: ${reason}). Yeniden bağlanılıyor...`);
+      } else {
+        addLog('error', `SOCKET ERROR (disconnect): Sunucuyla bağlantı koptu - Neden: ${reason}`);
+      }
+    };
+    
+    const onConnect = () => {
+       addLog('info', `✅ Sunucuyla bağlantı sağlandı! (Socket ID: ${socket.id})`);
+    };
+
     const onSocketError = (err) => addLog('error', `SOCKET ERROR (error): Genel soket hatası - ${err}`);
 
     if (socket) {
+      socket.on('connect', onConnect);
       socket.on('connect_error', onConnectError);
       socket.on('disconnect', onDisconnect);
       socket.on('error', onSocketError);
-      
-      // Gelen herhangi bir event için global dinleyici (Eğer kütüphane destekliyorsa)
-      // socket.onAny((eventName, ...args) => addLog('info', `SOCKET EVENT: ${eventName}`));
     }
 
     // State yapısını izleme: Hatalı GameState paketi gelirse uyar
@@ -95,6 +113,7 @@ export default function DevLogPanel() {
       window.removeEventListener('error', windowErrorHandler);
       window.removeEventListener('unhandledrejection', promiseRejectionHandler);
       if (socket) {
+        socket.off('connect', onConnect);
         socket.off('connect_error', onConnectError);
         socket.off('disconnect', onDisconnect);
         socket.off('error', onSocketError);
