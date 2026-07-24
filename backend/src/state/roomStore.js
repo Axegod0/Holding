@@ -1,9 +1,10 @@
-import { ILLEGAL_JOBS_DECK } from '../constants/illegalJobsDeck.js';
+import { ILLEGAL_JOBS_DECK } from '../constants/illegalJobs.js';
 import { COURTROOM_CRIMES } from '../constants/courtroomCrimes.js';
 import { PAWN_COLORS, getRandomAvailableColor } from '../constants/colors.js';
 import { BOARD_DATA } from '../constants/boardData.js';
 import { CHANCE_CARDS } from '../constants/chanceCards.js';
 import * as cardEffectService from './cardEffectService.js';
+import { checkActiveIllegalJobs } from './illegalJobsEngine.js';
 /**
  * Bellek içi (In-Memory) Oda ve Oyuncu Yönetim Mağazası (Store)
  * odalar: Map<roomCode, RoomObject>
@@ -712,29 +713,26 @@ export function rollDice(socketId) {
   playerState.position = newPosition;
 
   const targetSquare = BOARD_DATA.find(s => s.id === newPosition);
+  checkActiveIllegalJobs(room, socketId, 'LANDED_ON_SQUARE', { targetSquare, newPosition });
 
   // İllegal İşler / Kaçak Lojistik (Kare 7 veya 28) Kontrolü
   if ((targetSquare && targetSquare.type === 'ILLEGAL_JOB_TILE') || newPosition === 7 || newPosition === 28) {
-    if (!room.gameState.activePlayerQuests) room.gameState.activePlayerQuests = {};
     const quest = ILLEGAL_JOBS_DECK[Math.floor(Math.random() * ILLEGAL_JOBS_DECK.length)];
-    const activeQuest = {
-      ...quest,
-      assignedAt: Date.now(),
-      currentRolls: 0,
-      tilesMoved: 0,
-      currentLaps: 0,
-      status: 'ACTIVE'
+    room.gameState.pendingIllegalJob = {
+      playerId: socketId,
+      quest: quest
     };
-    room.gameState.activePlayerQuests[socketId] = activeQuest;
 
     if (room.ioInstance) {
       room.ioInstance.to(room.code).emit('server:logMessage', {
-        message: '🕵️ İLLEGAL GÖREV ALINDI: ' + activePlayer.name + ', "' + quest.title + '" görevini kabul etti! (' + quest.description + ')',
+        message: `🕵️ ${activePlayer.name} gizli bir bağlantı kurdu. İllegal bir teklif alıyor...`,
         type: 'warning'
       });
-      room.ioInstance.to(room.code).emit('server:illegalJobAssigned', { playerId: socketId, quest: activeQuest });
+      room.ioInstance.to(room.code).emit('server:illegalJobOffered', { playerId: socketId, quest: quest });
     }
   }
+
+  checkActiveIllegalJobs(room, socketId, 'DICE_ROLLED', { dice1, dice2, isDouble, diceTotal });
 
   // Başlangıç Karesi (GO) Geçiş Kontrolü ve Dinamik Varlık Maaşı
   const passedGo = (oldPosition + diceTotal) >= 40;
@@ -763,7 +761,11 @@ export function rollDice(socketId) {
 
     // Decrement lap-based card effects
     expiredEffects = cardEffectService.decrementLaps(room, socketId);
-    checkPlayerQuestOnPassGo(room, socketId);
+    checkActiveIllegalJobs(room, socketId, 'PASSED_GO');
+    
+    if (playerState.bankOperationsBlockedLaps > 0) {
+      playerState.bankOperationsBlockedLaps -= 1;
+    }
   }
   let offerProperty = null;
   let rentPaidData = null;
@@ -1413,7 +1415,11 @@ export function buildHouse(socketId, propertyId) {
   if (cardEffectService.hasActiveEffect(room, socketId, 'NO_CREDIT_OR_BUILD')) {
     return { success: false, error: 'Maliye blokajı nedeniyle 1 tur boyunca inşaat yapamazsınız!' };
   }
-    return { success: false, error: 'Oyun aktif değil.' };
+  const playerState = room.gameState.playersState[socketId];
+  if (playerState?.bankOperationsBlockedLaps > 0) {
+    return { success: false, error: `İllegal faaliyet cezası nedeniyle hesaplarınız donduruldu. İnşaat yapamazsınız! (Kalan tur: ${playerState.bankOperationsBlockedLaps})` };
+  }
+  return { success: false, error: 'Oyun aktif değil.' };
   }
 
   const ownership = room.gameState.propertyOwnership[propertyId];
@@ -1436,7 +1442,6 @@ export function buildHouse(socketId, propertyId) {
     return { success: false, error: 'Bu mülk üzerinde zaten maksimum seviye (Otel) inşaat yapılmış durumda!' };
   }
 
-  const playerState = room.gameState.playersState[socketId];
   const player = room.players.find(p => p.id === socketId);
   const cost = square.housePrice || 0;
 
@@ -1723,6 +1728,10 @@ export function bankAction(socketId, action, data) {
 
   const playerState = room.gameState.playersState[socketId];
   if (!playerState) return { success: false, error: 'Oyuncu durumu bulunamadı.' };
+
+  if (playerState.bankOperationsBlockedLaps > 0) {
+    return { success: false, error: `İllegal faaliyet cezası nedeniyle hesaplarınız donduruldu. Banka işlemi yapamazsınız! (Kalan tur: ${playerState.bankOperationsBlockedLaps})` };
+  }
   if (!room.gameState.bankState) room.gameState.bankState = {};
   if (!room.gameState.bankState[socketId]) room.gameState.bankState[socketId] = { deposit: 0, loans: [] };
 
@@ -2989,6 +2998,45 @@ export function sendSwapOffer(socketId, toId, offeredProperties, offeredCash, re
 }
 
 /**
+ * FAZ 11 / İllegal İşler Modülü: İllegal Göreve Yanıt Verme (respondIllegalJob)
+ */
+export function respondIllegalJob(socketId, action) {
+  const room = getRoomBySocketId(socketId);
+  if (!room || !room.isStarted || !room.gameState) {
+    return { success: false, error: 'Oyun aktif değil.' };
+  }
+
+  const pendingJob = room.gameState.pendingIllegalJob;
+  if (!pendingJob || pendingJob.playerId !== socketId) {
+    return { success: false, error: 'Bekleyen bir illegal görev teklifi bulunamadı.' };
+  }
+
+  const player = room.players.find(p => p.id === socketId);
+  const quest = pendingJob.quest;
+  
+  // Clear pending job
+  room.gameState.pendingIllegalJob = null;
+
+  if (action === 'ACCEPT') {
+    if (!room.gameState.activePlayerQuests) room.gameState.activePlayerQuests = {};
+    const activeQuest = {
+      ...quest,
+      assignedAt: Date.now(),
+      currentRolls: 0,
+      tilesMoved: 0,
+      currentLaps: 0,
+      status: 'ACTIVE'
+    };
+    room.gameState.activePlayerQuests[socketId] = activeQuest;
+    return { success: true, room, action, quest: activeQuest, playerName: player.name };
+  } else {
+    // DECLINE
+    return { success: true, room, action, quest, playerName: player.name };
+  }
+}
+
+
+/**
  * FAZ 10 / Geri Dönüşler Faz 3: Takas Teklifine Yanıt Verme (respondSwapOffer)
  */
 export function respondSwapOffer(socketId, offerId, accepted) {
@@ -3352,133 +3400,4 @@ export function submitProsecutorVerdict(socketId, verdict) {
 }
 
 
-/**
- * İLLEGAL GÖREV İLERLEME VE DENETİM METODLARI
- */
-export function checkPlayerQuestOnRoll(room, socketId, diceTotal) {
-  if (!room || !room.gameState || !room.gameState.activePlayerQuests) return;
-  const quest = room.gameState.activePlayerQuests[socketId];
-  if (!quest) return;
 
-  const playerState = room.gameState.playersState[socketId];
-  const activePlayer = room.players.find(p => p.id === socketId);
-  const playerName = activePlayer?.name || 'Oyuncu';
-
-  quest.currentRolls = (quest.currentRolls || 0) + 1;
-
-  if (quest.id === 'ILLEGAL_1') {
-    quest.tilesMoved = (quest.tilesMoved || 0) + diceTotal;
-    if (quest.tilesMoved >= 30) {
-      playerState.balance += 100000;
-      delete room.gameState.activePlayerQuests[socketId];
-      if (room.ioInstance) {
-        room.ioInstance.to(room.code).emit('server:logMessage', {
-          message: '🚀 İLLEGAL GÖREV BAŞARILI! ' + playerName + ' kaçak konteynerları 30 kare ilerleterek çıkardı (+100.000 ₺ kâr)!',
-          type: 'success'
-        });
-      }
-    } else if (quest.currentRolls >= 3) {
-      let topPropId = null;
-      let maxVal = -1;
-      Object.entries(room.gameState.propertyOwnership || {}).forEach(([id, info]) => {
-        if (info.ownerId === socketId) {
-          const sq = BOARD_DATA.find(s => s.id === Number(id));
-          if (sq) {
-            const val = sq.price || 0;
-            if (val > maxVal) { maxVal = val; topPropId = Number(id); }
-          }
-        }
-      });
-      if (topPropId !== null) {
-        delete room.gameState.propertyOwnership[topPropId];
-      }
-      delete room.gameState.activePlayerQuests[socketId];
-      if (room.ioInstance) {
-        room.ioInstance.to(room.code).emit('server:logMessage', {
-          message: '🚨 İLLEGAL GÖREV BAŞARISIZ! ' + playerName + ' 3 zar atışında 30 kareye ulaşamadı. En değerli mülkü devlete geçti!',
-          type: 'error'
-        });
-      }
-    }
-  } else if (quest.id === 'ILLEGAL_2') {
-    if (quest.currentRolls >= 2 && quest.currentLaps < 1) {
-      const penaltyCash = Math.floor(playerState.balance * 0.30);
-      playerState.balance -= penaltyCash;
-      delete room.gameState.activePlayerQuests[socketId];
-      if (room.ioInstance) {
-        room.ioInstance.to(room.code).emit('server:logMessage', {
-          message: `🚨 İLLEGAL GÖREV BAŞARISIZ! ${playerName} 2 zarda sınırdan geçemedi. Kasasının %30'una (-${penaltyCash.toLocaleString('tr-TR')} ₺) el konuldu!`,
-          type: 'error'
-        });
-      }
-    }
-  }
-}
-
-export function checkPlayerQuestOnPassGo(room, socketId) {
-  if (!room || !room.gameState || !room.gameState.activePlayerQuests) return;
-  const quest = room.gameState.activePlayerQuests[socketId];
-  if (!quest) return;
-
-  const playerState = room.gameState.playersState[socketId];
-  const activePlayer = room.players.find(p => p.id === socketId);
-  const playerName = activePlayer?.name || 'Oyuncu';
-
-  quest.currentLaps = (quest.currentLaps || 0) + 1;
-
-  if (quest.id === 'ILLEGAL_2') {
-    if (quest.currentLaps >= 1) {
-      playerState.balance += 150000;
-      delete room.gameState.activePlayerQuests[socketId];
-      if (room.ioInstance) {
-        room.ioInstance.to(room.code).emit('server:logMessage', {
-          message: '🚀 İLLEGAL GÖREV BAŞARILI! ' + playerName + ' zamanında Başlangıç çizgisinden geçerek transit sevkiyatı tamamladı (+150.000 ₺)!',
-          type: 'success'
-        });
-      }
-    }
-  } else if (quest.id === 'ILLEGAL_3') {
-    if (quest.currentLaps >= 2) {
-      playerState.balance += 120000;
-      delete room.gameState.activePlayerQuests[socketId];
-      if (room.ioInstance) {
-        room.ioInstance.to(room.code).emit('server:logMessage', {
-          message: '🚀 İLLEGAL GÖREV BAŞARILI! ' + playerName + ' 2 tur boyunca hiçbir ceza karesine basmadan Kırmızı Hat sevkiyatını bitirdi (+120.000 ₺)!',
-          type: 'success'
-        });
-      }
-    }
-  } else if (quest.id === 'ILLEGAL_4') {
-    if (quest.currentLaps >= 2) {
-      playerState.balance -= 80000;
-      delete room.gameState.activePlayerQuests[socketId];
-      if (room.ioInstance) {
-        room.ioInstance.to(room.code).emit('server:logMessage', {
-          message: '🚨 İLLEGAL GÖREV BAŞARISIZ! ' + playerName + ' 2 tur içinde mülk edinemedi. 80.000 ₺ Kara Para Cezası kesildi!',
-          type: 'error'
-        });
-      }
-    }
-  }
-}
-
-export function checkPlayerQuestOnAcquire(room, socketId, cost) {
-  if (!room || !room.gameState || !room.gameState.activePlayerQuests) return;
-  const quest = room.gameState.activePlayerQuests[socketId];
-  if (!quest || quest.id !== 'ILLEGAL_4') return;
-
-  const playerState = room.gameState.playersState[socketId];
-  const activePlayer = room.players.find(p => p.id === socketId);
-  const playerName = activePlayer?.name || 'Oyuncu';
-
-  const refund = Math.floor((cost || 0) * 0.50);
-  playerState.balance += 50000 + refund;
-  delete room.gameState.activePlayerQuests[socketId];
-
-  if (room.ioInstance) {
-    room.ioInstance.to(room.code).emit('server:logMessage', {
-      message: '🚀 İLLEGAL GÖREV BAŞARILI! ' + playerName + ' içeriden bilgiyle mülk satın aldı (+50.000 ₺ bonus + ' + refund.toLocaleString('tr-TR') + ' ₺ harcama iadesi)!',
-      type: 'success'
-    });
-  }
-}

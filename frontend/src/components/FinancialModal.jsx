@@ -26,6 +26,7 @@ export default function FinancialModal() {
   const jailInfo = gameState?.jailState?.[myId] || gameState?.jailState?.[socket?.id] || { inJail: false, turnsServed: 0 };
   const propertyOwnership = gameState?.propertyOwnership || {};
   const isRemote = myState.position !== 20;
+  const isBankBlocked = myState.bankOperationsBlockedLaps > 0;
 
   // Bana ait mülkleri listele
   const myProperties = Object.entries(propertyOwnership)
@@ -130,13 +131,13 @@ export default function FinancialModal() {
                     type="number"
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(e.target.value)}
-                    placeholder={`Yatırılacak tutar (Maks: ${myState.balance?.toLocaleString('tr-TR')} ₺)`}
-                    disabled={loading || isRemote || myState.balance <= 0}
+                    placeholder={isBankBlocked ? `Hesaplarınız donduruldu!` : `Yatırılacak tutar (Maks: ${myState.balance?.toLocaleString('tr-TR')} ₺)`}
+                    disabled={loading || isRemote || myState.balance <= 0 || isBankBlocked}
                     className="flex-1 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2 text-xs font-mono text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 focus:outline-none focus:border-emerald-500 transition-all disabled:opacity-50"
                   />
                   <button
                     type="submit"
-                    disabled={isRemote || !depositAmount || Number(depositAmount) <= 0 || Number(depositAmount) > myState.balance || loading}
+                    disabled={isRemote || !depositAmount || Number(depositAmount) <= 0 || Number(depositAmount) > myState.balance || loading || isBankBlocked}
                     className="py-2 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                   >
                     Yatır (+%4 / Tur)
@@ -147,7 +148,7 @@ export default function FinancialModal() {
                   <button
                     type="button"
                     onClick={() => bankAction('withdraw_deposit')}
-                    disabled={loading}
+                    disabled={loading || isBankBlocked}
                     className="py-2 px-4 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-gray-950 font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shrink-0 shadow-md"
                   >
                     Mevduatı Tahsil Et ({bankInfo.deposit?.toLocaleString('tr-TR')} ₺)
@@ -163,6 +164,11 @@ export default function FinancialModal() {
                   <Building2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                   Serbest Kredi ve İpotekler (%70 Limit • Bileşik Faiz: {isRemote ? '%8 Mobil' : '%4 Şube'})
                 </span>
+                {isBankBlocked && (
+                  <span className="text-[10px] text-red-500 animate-pulse flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> HESAPLAR DONDURULDU
+                  </span>
+                )}
                 <span className="text-neutral-500">{myProperties.length} Mülk</span>
               </div>
 
@@ -191,7 +197,7 @@ export default function FinancialModal() {
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] text-neutral-500">#{prop.id} • ŞEHİR TAPUSU</span>
                             {isMortgaged && (
-                              <span className="bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-300 px-1.5 py-0.5 rounded text-[9px] font-bold border border-red-200 dark:border-red-500/30 flex items-center gap-1">
+                              <span className="bg-red-50 dark:bg-red-500/20 text-red-600 dark:bg-red-950/50 text-red-600 dark:text-red-300 px-1.5 py-0.5 rounded text-[9px] font-bold border border-red-200 dark:border-red-500/30 flex items-center gap-1">
                                 <Lock className="w-2.5 h-2.5" /> İPOTEKLİ
                               </span>
                             )}
@@ -213,9 +219,9 @@ export default function FinancialModal() {
                             </div>
                             <button
                               onClick={() => bankAction('repay_loan', { propertyId: prop.id })}
-                              disabled={loading || myState.balance < (activeLoan?.repayAmount || 0)}
+                              disabled={loading || myState.balance < (activeLoan?.repayAmount || 0) || isBankBlocked}
                               className={`w-full py-2 px-2 rounded-lg font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all ${
-                                myState.balance >= (activeLoan?.repayAmount || 0)
+                                myState.balance >= (activeLoan?.repayAmount || 0) && !isBankBlocked
                                   ? 'bg-amber-500 text-gray-950 hover:bg-amber-400 cursor-pointer shadow-sm'
                                   : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-500 cursor-not-allowed'
                               }`}
@@ -235,13 +241,13 @@ export default function FinancialModal() {
                                 placeholder={maxLimit}
                                 max={maxLimit}
                                 min={1000}
-                                disabled={loading}
-                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-1 text-xs text-cyan-600 dark:text-cyan-300 font-bold focus:outline-none focus:border-cyan-500 text-right"
+                                disabled={loading || isBankBlocked}
+                                className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-1 text-xs text-cyan-600 dark:text-cyan-300 font-bold focus:outline-none focus:border-cyan-500 text-right disabled:opacity-50"
                               />
                             </div>
                             <button
                               onClick={() => handleLoanSubmit(prop.id, maxLimit)}
-                              disabled={loading || Number(currentCustom) <= 0 || Number(currentCustom) > maxLimit}
+                              disabled={loading || Number(currentCustom) <= 0 || Number(currentCustom) > maxLimit || isBankBlocked}
                               className="w-full py-2 px-2 rounded-lg bg-cyan-50 dark:bg-cyan-500/15 hover:bg-cyan-100 dark:hover:bg-cyan-500 text-cyan-700 dark:text-cyan-300 hover:text-cyan-900 dark:hover:text-neutral-950 border border-cyan-200 dark:border-cyan-500/30 font-bold text-[11px] uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               <DollarSign className="w-3.5 h-3.5" />

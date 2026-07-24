@@ -400,6 +400,7 @@ export default function GameBoard() {
                 const currentPosSquare = boardData.find(s => s.id === pState.position)?.name || `#${pState.position}`;
                 const isCurrentTurn = currentTurnIndex === idx;
                 const isMe = (p.id === myId || p.id === socket?.id);
+                const hasActiveQuest = gameState?.activePlayerQuests?.[p.id];
 
                 return (
                   <div
@@ -420,6 +421,11 @@ export default function GameBoard() {
                         {p.isHost && (
                           <span className="text-[8px] font-mono font-bold px-1 py-0.1 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">
                             HOST
+                          </span>
+                        )}
+                        {hasActiveQuest && (
+                          <span title={`Gizli Görev: ${hasActiveQuest.title}`} className="text-[10px] font-mono font-bold px-1 py-0.1 rounded bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse">
+                            GİZLİ İŞ
                           </span>
                         )}
                       </div>

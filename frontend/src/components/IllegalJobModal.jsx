@@ -1,31 +1,32 @@
 import React from 'react';
-import { Skull, AlertTriangle, ShieldAlert, CheckCircle2, TrendingUp, Lock } from 'lucide-react';
+import { Skull, ShieldAlert, CheckCircle2, TrendingUp, X } from 'lucide-react';
 import useGameStore from '../store/gameStore.js';
 import socket from '../services/socket.js';
 
 export default function IllegalJobModal() {
   const gameState = useGameStore(state => state.gameState);
   const myId = useGameStore(state => state.myId) || socket?.id;
-  const isTokenMoving = useGameStore(state => state.isTokenMoving);
 
-  const activeQuest = gameState?.activePlayerQuests?.[myId];
+  const pendingJob = gameState?.pendingIllegalJob;
 
-  if (!activeQuest || isTokenMoving) return null;
+  if (!pendingJob || pendingJob.playerId !== myId) return null;
 
-  const { title, description, reward, penalty, maxRollsAllowed, targetValue, targetType } = activeQuest;
+  const { title, description, reward, penalty } = pendingJob.quest;
 
-  const handleClose = () => {
-    // Quest is active and tracked automatically
-    useGameStore.setState(state => ({
-      gameState: {
-        ...state.gameState,
-        showIllegalModal: false
-      }
-    }));
+  const handleAccept = () => {
+    socket.emit('client:respondIllegalJob', { action: 'ACCEPT' }, (res) => {
+      // handled by game state update
+    });
+  };
+
+  const handleDecline = () => {
+    socket.emit('client:respondIllegalJob', { action: 'DECLINE' }, (res) => {
+      // handled by game state update
+    });
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200 overflow-y-auto">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-neutral-950/80 backdrop-blur-md p-4 animate-in fade-in duration-200 overflow-y-auto">
       <div className="border border-red-500/50 rounded-2xl max-w-md w-full p-6 shadow-[0_0_60px_rgba(239,68,68,0.25)] flex flex-col gap-5 relative bg-[#18181b] text-white">
 
         {/* Top Pulsing Red Line */}
@@ -38,7 +39,7 @@ export default function IllegalJobModal() {
           </div>
           <div>
             <span className="text-[10px] font-mono font-bold tracking-widest text-red-400 uppercase bg-red-500/10 px-2 py-0.5 rounded border border-red-500/30">
-              YÜKSEK RİSK & KAÇAK LOJİSTİK
+              YÜKSEK RİSK & İLLEGAL GÖREV
             </span>
             <h3 className="text-xl font-bold mt-1 text-white leading-tight">{title}</h3>
           </div>
@@ -57,11 +58,8 @@ export default function IllegalJobModal() {
               <TrendingUp className="w-4 h-4" /> ÖDÜL (BAŞARI)
             </div>
             <p className="text-sm font-bold text-white font-mono mt-1">
-              {reward?.cash ? `+${reward.cash.toLocaleString('tr-TR')} ₺` : reward?.cashBonus ? `+${reward.cashBonus.toLocaleString('tr-TR')} ₺ Bonus` : 'Yüksek Kâr'}
+              {reward?.cash ? `+${reward.cash.toLocaleString('tr-TR')} ₺` : reward?.cashBonus ? `+${reward.cashBonus.toLocaleString('tr-TR')} ₺ Bonus` : reward?.stealCashPercentFromRichest ? `Liderden %${reward.stealCashPercentFromRichest * 100} Çal` : reward?.acquireUnownedPropertyFree ? 'Bedava Sahipsiz Mülk' : 'Yüksek Kâr'}
             </p>
-            {reward?.refundPercentOnAcquire && (
-              <span className="text-[10px] text-emerald-300">%50 Harcama İadesi</span>
-            )}
           </div>
 
           {/* Penalty Box */}
@@ -70,27 +68,29 @@ export default function IllegalJobModal() {
               <ShieldAlert className="w-4 h-4" /> CEZA (BAŞARISIZLIK)
             </div>
             <p className="text-xs font-bold text-red-200 mt-1">
-              {penalty?.action === 'LOSE_MOST_VALUABLE_PROPERTY'
-                ? 'En Değerli Mülke El Konulur'
-                : penalty?.cashPercent
-                ? `%${penalty.cashPercent * 100} Nakit Cezası`
-                : penalty?.action === 'GO_TO_JAIL'
-                ? '1 Tur Hapis Cezası'
-                : penalty?.cash
-                ? `-${penalty.cash.toLocaleString('tr-TR')} ₺ Ceza`
-                : 'Ağır Yaptırım'}
+              {penalty?.action === 'AUCTION_MOST_VALUABLE_PROPERTY' ? 'En Değerli Mülk İhaleye Çıkar' : penalty?.bankOperationsBlockedLaps ? `${penalty.bankOperationsBlockedLaps} Tur Banka Kilidi` : penalty?.action === 'GO_TO_JAIL' ? `${penalty.durationLaps || 1} Tur Hapis Cezası` : penalty?.cashPercent ? `-%${penalty.cashPercent * 100} Nakit Cezası` : penalty?.cash ? `-${penalty.cash.toLocaleString('tr-TR')} ₺ Ceza` : 'Ağır Yaptırım'}
             </p>
           </div>
         </div>
 
-        {/* Action Button */}
-        <button
-          onClick={handleClose}
-          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold font-mono text-sm transition-all duration-200 shadow-lg cursor-pointer flex items-center justify-center gap-2"
-        >
-          <CheckCircle2 className="w-5 h-5" />
-          <span>GÖREVİ KABUL ET VE BAŞLAT</span>
-        </button>
+        {/* Action Buttons */}
+        <div className="flex gap-3 mt-2">
+          <button
+            onClick={handleDecline}
+            className="flex-1 py-3 px-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold font-mono text-sm transition-all duration-200 shadow flex items-center justify-center gap-2"
+          >
+            <X className="w-4 h-4" />
+            <span>REDDET (PAS GEÇ)</span>
+          </button>
+          
+          <button
+            onClick={handleAccept}
+            className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold font-mono text-sm transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>GÖREVİ KABUL ET</span>
+          </button>
+        </div>
 
       </div>
     </div>

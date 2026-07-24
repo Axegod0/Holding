@@ -30,6 +30,7 @@ import {
   playCasinoAction,
   submitJuryVote,
   submitProsecutorVerdict,
+  respondIllegalJob,
   getRoomBySocketId
 } from '../state/roomStore.js';
 import { CHANCE_CARDS } from '../constants/chanceCards.js';
@@ -600,7 +601,31 @@ export function registerRoomHandlers(io, socket) {
     callback({ success: true, result });
   });
 
-
+  socket.on('client:respondIllegalJob', ({ action }, callback = () => {}) => {
+    const result = respondIllegalJob(socket.id, action);
+    if (!result.success) {
+      socket.emit('server:error', { message: result.error });
+      return callback({ success: false, error: result.error });
+    }
+    
+    const { room, quest, playerName } = result;
+    
+    if (action === 'ACCEPT') {
+      io.to(room.code).emit('server:logMessage', {
+        message: `🕵️ [İllegal İşler]: ${playerName} riskli bir illegal görevi kabul etti: "${quest.title}"`,
+        type: 'warning'
+      });
+      io.to(room.code).emit('server:illegalJobAssigned', { playerId: socket.id, quest });
+    } else {
+      io.to(room.code).emit('server:logMessage', {
+        message: `🛡️ [İllegal İşler]: ${playerName} illegal görevi reddetti ve temiz kalmayı seçti.`,
+        type: 'info'
+      });
+    }
+    
+    io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    callback({ success: true });
+  });
 
   // --- AUTH SYSTEM HANDLERS ---
   socket.on('client:guestLogin', (data, callback) => {
