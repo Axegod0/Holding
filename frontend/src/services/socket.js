@@ -36,18 +36,17 @@ const BACKEND_URL = getBackendUrl();
  */
 export const socket = io(BACKEND_URL, {
   autoConnect: true,
-  // 1. Önce polling ile başlayıp daha sonra otomatik WebSocket'e yükseltme (Proxy'lerdeki upgrade hatalarını önlemek için en esnek yapı):
-  transports: ['polling', 'websocket'], 
+  // WebSocket öncelikli, XHR polling yedekli bağlantı (Proxy ve Nginx reverse proxy uyumu için):
+  transports: ['websocket', 'polling'],
   upgrade: true,
   
-  // 2. Yeniden Bağlanma (Reconnection) ve Gecikme Ayarları - Nginx / Apple Safari uyumlu esnek limitler:
+  // Reconnection ve esnek zaman aşımı ayarları:
   reconnection: true,
-  reconnectionAttempts: Infinity, // Kopmalarda pes etmeden bağlanmayı dener
-  reconnectionDelay: 1000,        // İlk kopmada 1 saniye içinde tekrar dener
-  reconnectionDelayMax: 5000,     // Maksimum bekleme süresini 5 saniyede sınırlar
-  randomizationFactor: 0.5,       // Nginx'i ani ping yağmuruna tutmamak için rastgelelik payı
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5,
   
-  // 3. Zaman Aşımı ve Ping (Timeout) - Mobil ağ ve proxy gecikmelerine karşı genişletilmiş:
   timeout: 20000,
   withCredentials: false
 });

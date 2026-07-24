@@ -12,7 +12,7 @@ export function initializeSocket(httpServer) {
       origin: "*",
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     },
-    transports: ["polling", "websocket"],
+    transports: ["websocket", "polling"],
     allowEIO3: true,
     pingTimeout: 20000,
     pingInterval: 25000
