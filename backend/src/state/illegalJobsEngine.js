@@ -5,7 +5,7 @@ import { BOARD_DATA } from '../constants/boardData.js';
  */
 function applyPenalty(room, socketId, penalty) {
   const playerState = room.gameState.playersState[socketId];
-  if (!playerState) return;
+  if (!playerState || !penalty) return;
 
   if (penalty.action === "AUCTION_MOST_VALUABLE_PROPERTY") {
     // Find most valuable property and force it to unowned state (simulating auction or loss)
@@ -40,7 +40,7 @@ function applyPenalty(room, socketId, penalty) {
  */
 function applyReward(room, socketId, reward) {
   const playerState = room.gameState.playersState[socketId];
-  if (!playerState) return;
+  if (!playerState || !reward) return;
 
   if (reward.cash) {
     playerState.balance += reward.cash;
