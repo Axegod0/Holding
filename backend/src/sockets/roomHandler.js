@@ -1066,8 +1066,17 @@ export function registerRoomHandlers(io, socket) {
 
     console.log(`[Şans Kararı]: ${room.code} - ${playerName} Kart #${cardId} için Seçenek [${decision}] seçti.`);
 
-    // 1. Son Dakika Haberi (Gazete Manşeti) Yayınla
-    io.to(room.code).emit('server:newsFlash', newsFlash);
+    // 1. Son Dakika Haberi (Gazete Manşeti) Yalnızca Kriz/Skandal ise Yayınla
+    if (newsFlash && newsFlash.isCrisis) {
+      io.to(room.code).emit('server:newsFlash', newsFlash);
+    }
+
+    if (newsFlash && newsFlash.message) {
+      io.to(room.code).emit('server:logMessage', {
+        message: `📰 ${newsFlash.message}`,
+        type: newsFlash.isCrisis ? 'error' : 'info'
+      });
+    }
 
     if (result.selectedOption?.actionType === 'GO_TO_JAIL_NO_SALARY') {
       io.to(room.code).emit('server:playerJailed', {

@@ -2854,9 +2854,9 @@ export function chanceCardDecision(socketId, { cardId, decision }) {
     }
   }
 
-  newsFlashTitle = `📰 BORSADA SON DAKİKA: \$\{card.title.toUpperCase()\}`;
+  newsFlashTitle = `📰 BORSADA SON DAKİKA: ${card.title ? card.title.toUpperCase() : 'ŞANS KARTI'}`;
 
-  const isCrisis = card.type === 'crisis' || card.isScandal === true;
+  const isCrisis = card.type === 'crisis' || card.isScandal === true || selectedOption?.actionType?.includes('JAIL') || selectedOption?.actionType?.includes('AUDIT') || selectedOption?.actionType?.includes('RAID');
   const isDouble = waiting.isDouble;
   delete room.gameState.waitingForChanceDecision;
 
