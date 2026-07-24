@@ -1,7 +1,9 @@
+import { ILLEGAL_JOBS_DECK } from '../constants/illegalJobsDeck.js';
+import { COURTROOM_CRIMES } from '../constants/courtroomCrimes.js';
 import { PAWN_COLORS, getRandomAvailableColor } from '../constants/colors.js';
 import { BOARD_DATA } from '../constants/boardData.js';
 import { CHANCE_CARDS } from '../constants/chanceCards.js';
-
+import * as cardEffectService from './cardEffectService.js';
 /**
  * Bellek içi (In-Memory) Oda ve Oyuncu Yönetim Mağazası (Store)
  * odalar: Map<roomCode, RoomObject>
@@ -647,8 +649,18 @@ export function rollDice(socketId) {
     return { success: false, error: 'Borç Modundasınız! Turunuza devam etmek için önce borcunuzu ödemeli veya mülk satıp/ihaleye çıkarmalısınız.' };
   }
 
+  if (cardEffectService.hasActiveEffect(room, socketId, 'ROAD_BLOCK')) {
+    cardEffectService.removeEffect(room, socketId, 'ROAD_BLOCK');
+    advanceToNextTurn(room, false);
+    return { success: true, room, dice1: 0, dice2: 0, isDouble: false, hasRoadBlock: true };
+  }
   let dice1 = Math.floor(Math.random() * 6) + 1;
   let dice2 = Math.floor(Math.random() * 6) + 1;
+  if (cardEffectService.hasActiveEffect(room, socketId, 'GUARANTEED_DOUBLE')) {
+    cardEffectService.removeEffect(room, socketId, 'GUARANTEED_DOUBLE');
+    dice1 = 6;
+    dice2 = 6;
+  }
 
   if (room.gameState.adminNextDice) {
     dice1 = room.gameState.adminNextDice[0];
@@ -657,6 +669,7 @@ export function rollDice(socketId) {
   }
 
   const diceTotal = dice1 + dice2;
+  checkPlayerQuestOnRoll(room, socketId, diceTotal);
   const isDouble = dice1 === dice2;
 
   // Hapis (Jail) Kontrolü
@@ -698,9 +711,33 @@ export function rollDice(socketId) {
   const newPosition = (oldPosition + diceTotal) % 40;
   playerState.position = newPosition;
 
+  // İllegal İşler / Kaçak Lojistik (Kare 7 veya 28) Kontrolü
+  if (targetSquare.type === 'ILLEGAL_JOB_TILE' || newPosition === 7 || newPosition === 28) {
+    if (!room.gameState.activePlayerQuests) room.gameState.activePlayerQuests = {};
+    const quest = ILLEGAL_JOBS_DECK[Math.floor(Math.random() * ILLEGAL_JOBS_DECK.length)];
+    const activeQuest = {
+      ...quest,
+      assignedAt: Date.now(),
+      currentRolls: 0,
+      tilesMoved: 0,
+      currentLaps: 0,
+      status: 'ACTIVE'
+    };
+    room.gameState.activePlayerQuests[socketId] = activeQuest;
+
+    if (room.ioInstance) {
+      room.ioInstance.to(room.code).emit('server:logMessage', {
+        message: '🕵️ İLLEGAL GÖREV ALINDI: ' + activePlayer.name + ', "' + quest.title + '" görevini kabul etti! (' + quest.description + ')',
+        type: 'warning'
+      });
+      room.ioInstance.to(room.code).emit('server:illegalJobAssigned', { playerId: socketId, quest: activeQuest });
+    }
+  }
+
   // Başlangıç Karesi (GO) Geçiş Kontrolü ve Dinamik Varlık Maaşı
   const passedGo = (oldPosition + diceTotal) >= 40;
   let salaryAmount = 0;
+  let expiredEffects = [];
   if (passedGo) {
     calculatePlayerTotalAssetValue(room, socketId);
     salaryAmount = Math.round(15000 + (playerState.totalAssetValue * 0.05));
@@ -708,6 +745,12 @@ export function rollDice(socketId) {
       salaryAmount += room.gameState.goBonus[socketId];
       room.gameState.goBonus[socketId] = 0;
     }
+    
+    // Check if player has DARK_CONSORTIUM effect giving 8% start bonus
+    if (cardEffectService.hasActiveEffect(room, socketId, 'DARK_CONSORTIUM_BONUS')) {
+       salaryAmount = Math.round(15000 + (playerState.totalAssetValue * 0.08));
+    }
+
     if (room.gameState.chanceBuffs?.[socketId]?.earningsRatio) {
       salaryAmount = Math.round(salaryAmount * room.gameState.chanceBuffs[socketId].earningsRatio);
     }
@@ -715,6 +758,10 @@ export function rollDice(socketId) {
       salaryAmount = Math.round(salaryAmount * (1 - room.gameState.chanceBuffs[socketId].penaltyRatio));
     }
     playerState.balance += salaryAmount;
+
+    // Decrement lap-based card effects
+    expiredEffects = cardEffectService.decrementLaps(room, socketId);
+    checkPlayerQuestOnPassGo(room, socketId);
   }
 
   const targetSquare = BOARD_DATA.find(s => s.id === newPosition);
@@ -747,16 +794,9 @@ export function rollDice(socketId) {
     };
   }
 
-  // Yeraltı Kumarhanesi / Blackjack (Kare 33) Kontrolü (GECICI OLARAK DEVRE DISI BIRAKILDI)
+  // Mahkeme Salonu (Kare 33) Kontrolü
   if (newPosition === 33) {
-    if (room.ioInstance) {
-      room.ioInstance.to(room.code).emit('server:logMessage', {
-        message: '🎰 Kumarhane (Blackjack) ve davet sistemi revizyon nedeniyle geçici olarak kapalıdır.',
-        type: 'warning'
-      });
-    }
-    advanceToNextTurn(room, isDouble);
-    const nextActivePlayerId = room.players[room.gameState.currentTurnIndex]?.id;
+    startCourtroomSession(room, socketId, isDouble);
     return {
       success: true,
       room,
@@ -771,7 +811,7 @@ export function rollDice(socketId) {
       salaryAmount,
       newBalance: playerState.balance,
       currentTurnIndex: room.gameState.currentTurnIndex,
-      activePlayerId: nextActivePlayerId
+      waitingForCourtroom: true
     };
   }
 
@@ -970,6 +1010,10 @@ export function rollDice(socketId) {
           }
 
           if (hasAvmBonus) rentAmount = Math.round(rentAmount * 1.5);
+          if (cardEffectService.hasActiveEffect(room, ownerId, 'RENT_DROP_30')) rentAmount = Math.round(rentAmount * 0.7);
+          if (cardEffectService.hasActiveEffect(room, ownerId, 'RENT_BOOST_30')) rentAmount = Math.round(rentAmount * 1.3);
+          if (cardEffectService.hasActiveEffect(room, ownerId, 'DOUBLE_RENT_TARGET')) rentAmount = rentAmount * 2;
+          if (cardEffectService.hasActiveEffect(room, ownerId, 'NO_RENT') || cardEffectService.hasActiveEffect(room, ownerId, 'PROPERTIES_SEALED')) rentAmount = 0;
 
           playerState.balance -= rentAmount;
           if (ownerState) {
@@ -1001,6 +1045,7 @@ export function rollDice(socketId) {
           const activeTurns = room.gameState.tradeState?.[35]?.activeStockTurns || 0;
           let rentAmount = activeTurns > 0 ? 30000 : 5000;
 
+          if (cardEffectService.hasActiveEffect(room, ownerId, 'NO_RENT') || cardEffectService.hasActiveEffect(room, ownerId, 'PROPERTIES_SEALED')) rentAmount = 0;
           if (room.gameState.chanceBuffs?.[ownerId]?.haltedBusinessTurns > 0) {
             rentAmount = 0;
           }
@@ -1365,6 +1410,9 @@ export function declineProperty(socketId, propertyId) {
 export function buildHouse(socketId, propertyId) {
   const room = getRoomBySocketId(socketId);
   if (!room || !room.isStarted || !room.gameState) {
+  if (cardEffectService.hasActiveEffect(room, socketId, 'NO_CREDIT_OR_BUILD')) {
+    return { success: false, error: 'Maliye blokajı nedeniyle 1 tur boyunca inşaat yapamazsınız!' };
+  }
     return { success: false, error: 'Oyun aktif değil.' };
   }
 
@@ -1669,6 +1717,9 @@ export function stockMall(socketId) {
 export function bankAction(socketId, action, data) {
   const room = getRoomBySocketId(socketId);
   if (!room || !room.isStarted || !room.gameState) return { success: false, error: 'Oyun aktif değil.' };
+  if (cardEffectService.hasActiveEffect(room, socketId, 'NO_CREDIT_OR_BUILD') || cardEffectService.hasActiveEffect(room, socketId, 'CREDIT_BLOCK')) {
+    return { success: false, error: 'Maliye veya banka blokajı nedeniyle 1 tur boyunca banka işlemi yapamazsınız!' };
+  }
 
   const playerState = room.gameState.playersState[socketId];
   if (!playerState) return { success: false, error: 'Oyuncu durumu bulunamadı.' };
@@ -2329,243 +2380,483 @@ export function chanceCardDecision(socketId, { cardId, decision }) {
   const player = room.players.find(p => p.id === socketId);
   const playerName = player?.name || 'Oyuncu';
 
-  let newsFlashTitle = `📰 BORSADA SON DAKİKA: ${card.title.toUpperCase()}`;
-  let newsFlashMessage = '';
 
-  // Maliyet kesintisi veya nakit girişi (Örn: Katar ortaklığı cost = -150000)
-  if (selectedOption.cost !== 0 && selectedOption.cost !== undefined) {
-    playerState.balance -= selectedOption.cost;
+  const pState = room.gameState.playersState[socketId];
+  let newsFlashMessage = `\$\{playerName\}, \$\{card.title\} kartını çekti.`;
+  const act = selectedOption.actionType;
 
-    if (selectedOption.cost > 0) {
-      if (selectedOption.actionType === 'bribe_media') {
-        const mediaOwnerId = room.gameState.propertyOwnership?.[29]?.ownerId || room.gameState.propertyOwnership?.[28]?.ownerId;
-        if (mediaOwnerId) {
-          if (mediaOwnerId !== socketId) {
-            const mediaOwnerState = room.gameState.playersState[mediaOwnerId];
-            const mediaOwnerPlayer = room.players.find(p => p.id === mediaOwnerId);
-            if (mediaOwnerState) {
-              mediaOwnerState.balance += selectedOption.cost;
-              newsFlashMessage += `${playerName}, ödediği ${selectedOption.cost?.toLocaleString('tr-TR')} ₺ rüşvet/PR bedeliyle doğrudan Medya Şirketi sahibi ${mediaOwnerPlayer?.name || 'Oyuncu'}'nun kasasına katkıda bulundu! `;
-            }
-          } else {
-            // Medya sahibi kendisi ise ödeme yapmaz (net 0)
-            playerState.balance += selectedOption.cost; // İade et
-            newsFlashMessage += `${playerName}, kendi sahibi olduğu Medya Şirketi sayesinde herhangi bir PR/rüşvet bedeli ödemeden süreci atlattı! `;
-          }
-        } else {
-          newsFlashMessage += `Ödenen ${selectedOption.cost?.toLocaleString('tr-TR')} ₺ bedel devlete (bankaya) aktarıldı. `;
-        }
-      } else {
-        newsFlashMessage += `${playerName}, kasasından ${selectedOption.cost?.toLocaleString('tr-TR')} ₺ ödeme yaptı. `;
-      }
-    } else if (selectedOption.cost < 0) {
-      newsFlashMessage += `${playerName}${getPossessiveSuffix(playerName)} kasasına anında ${(-selectedOption.cost)?.toLocaleString('tr-TR')} ₺ sıcak para girdi. `;
-    }
+  // Handle PRESS_SUMMIT protection
+  if (cardEffectService.hasActiveEffect(room, socketId, 'PRESS_SUMMIT_PROTECT') && (act.includes('AUDIT') || act.includes('HACKER') || act.includes('JAIL') || act.includes('RAID') || act.includes('TAX'))) {
+    newsFlashMessage = `Basın Konseyi koruması devreye girdi! Negatif etki iptal edildi.`;
+    cardEffectService.removeEffect(room, socketId, 'PRESS_SUMMIT_PROTECT');
+    // skip execution
+  } else if (cardEffectService.hasActiveEffect(room, socketId, 'LOBBYING_SHIELD') && (act.includes('AUDIT') || act.includes('HACKER') || act.includes('JAIL') || act.includes('RAID') || act.includes('TAX') || act.includes('SABOTAGE') || act.includes('BLOCK'))) {
+    newsFlashMessage = `Ankara Lobisi koruması devreye girdi! Negatif etki veya sabotaj engellendi.`;
+    // skip execution
   } else {
-    if (!selectedOption.actionType || selectedOption.actionType === 'none') {
-      newsFlashMessage += `${playerName} herhangi bir ek masrafa veya riske girmedi. `;
-    }
-  }
-
-  if (!room.gameState.chanceBuffs) room.gameState.chanceBuffs = {};
-  if (!room.gameState.chanceBuffs[socketId]) room.gameState.chanceBuffs[socketId] = {};
-  const myBuffs = room.gameState.chanceBuffs[socketId];
-
-  // 11 Kartın Özel Action Tipi ve Backend Olasılıkları (Math.random())
-  if (selectedOption.actionType === 'startup_invest') {
-    if (Math.random() < 0.40) {
-      playerState.balance += selectedOption.cost * 3;
-      newsFlashMessage += `🚀 YATIRIM PATLAMA YAPTI! Girişim 3 katına satıldı ve ${playerName}${getPossessiveSuffix(playerName)} kasasına +${(selectedOption.cost * 3)?.toLocaleString('tr-TR')} ₺ girdi!`;
-    } else {
-      newsFlashMessage += `📉 Girişim başarısız oldu ve ${playerName}${getPossessiveSuffix(playerName)} yatırdığı paralar eridi.`;
-    }
-  } else if (selectedOption.actionType === 'esports_invest') {
-    if (Math.random() < 0.55) {
-      playerState.balance += selectedOption.cost * 2;
-      newsFlashMessage += `🎮 ŞAMPİYONLUK! Sponsor olunan takım turnuvayı kazandı ve ${playerName}${getPossessiveSuffix(playerName)} kasasına +${(selectedOption.cost * 2)?.toLocaleString('tr-TR')} ₺ getiri girdi!`;
-    } else {
-      newsFlashMessage += `🕹️ E-Spor takımı ilk turda elendi, ${playerName}${getPossessiveSuffix(playerName)} sponsorluk bedeli boşa gitti.`;
-    }
-  } else if (selectedOption.actionType === 'state_tender') {
-    const portOwnerId = room.gameState.propertyOwnership?.[5]?.ownerId;
-    if (portOwnerId && portOwnerId !== socketId && room.gameState.playersState[portOwnerId]) {
-      room.gameState.playersState[portOwnerId].balance += selectedOption.cost;
-      newsFlashMessage += `İhale giriş bedeli doğrudan Liman işletmecisine aktarıldı. `;
-    } else {
-      if (!room.gameState.jailState?.pool) if (!room.gameState.jailState) room.gameState.jailState = { pool: 0 };
-      room.gameState.jailState.pool = (room.gameState.jailState.pool || 0) + selectedOption.cost;
-    }
-
-    if (Math.random() < 0.60) {
-      myBuffs.tenderIncome = 35000;
-      myBuffs.tenderIncomeTurns = 3;
-      newsFlashMessage += `🏗️ İHALE KAZANILDI! ${playerName} ihaleyi kazandı, 3 tur boyunca her tur başında kasasına +35.000 ₺ düzenli nakit akışı sağlanacak!`;
-    } else {
-      newsFlashMessage += `❌ İhale kaybedildi, giriş bedeli devlete kaldı.`;
-    }
-  } else if (selectedOption.actionType === 'defy_slander') {
-    myBuffs.earningsRatio = 0.50;
-    myBuffs.earningsTurns = 3;
-    newsFlashMessage += `⚠️ ${playerName} rüşvet vermeyi reddetti ama hisseleri çakıldı! 3 tur boyunca tüm kazançları %50 kesintili olacak.`;
-  } else if (selectedOption.actionType === 'qatar_partnership') {
-    myBuffs.qatarPartner = true;
-    newsFlashMessage += `🤝 KATAR ORTAKLIĞI! ${playerName}${getPossessiveSuffix(playerName)} tüm işletme gelirlerinin %40'ı bundan sonra fona kesilecek.`;
-  } else if (selectedOption.actionType === 'stock_adventure') {
-    const invested = Math.round(playerState.balance * 0.50);
-    playerState.balance -= invested;
-    if (Math.random() < 0.55) {
-      playerState.balance += invested * 2;
-      newsFlashMessage += `📈 BORSADA RALLİ! ${playerName} yatırdığı ${invested?.toLocaleString('tr-TR')} ₺ hisseyi ikiye katladı (+${(invested * 2)?.toLocaleString('tr-TR')} ₺)!`;
-    } else {
-      newsFlashMessage += `📉 BORSA ÇAKILDI! ${playerName}${getPossessiveSuffix(playerName)} borsaya yatırdığı ${invested?.toLocaleString('tr-TR')} ₺ nakit parası eridi!`;
-    }
-  } else if (selectedOption.actionType === 'tax_immunity') {
-    myBuffs.taxImmunity = true;
-    myBuffs.taxImmunityTurns = 2;
-    newsFlashMessage += `🛡️ VERGİ MUAFİYETİ! ${playerName} 2 tur boyunca hiçbir hazine vergisi ve gümrük komisyonu ödemeyecek.`;
-  } else if (selectedOption.actionType === 'housing_support') {
-    myBuffs.housingSupport = { level2Turns: 2, level3Turns: 1 };
-    newsFlashMessage += `🏡 DEVLET KONUT DESTEĞİ! ${playerName}${getPossessiveSuffix(playerName)} 2 evli mülklerinin kirası 2 tur, 3 evli mülklerinin kirası 1 tur boyunca 2 katına çıktı!`;
-  } else if (selectedOption.actionType === 'build_incentive') {
-    myBuffs.buildDiscount = 0.45;
-    myBuffs.buildDiscountTurns = 1;
-    newsFlashMessage += `🏗️ İNŞAAT TEŞVİKİ! ${playerName} için 1 tur boyunca tüm ev ve otel dikme maliyetleri %45 indirimli olacak.`;
-  } else if (selectedOption.actionType === 'sabotage_port') {
-    const portOwnerId = room.gameState.propertyOwnership?.[5]?.ownerId;
-    if (!portOwnerId) {
-      newsFlashMessage += `Liman sahipsiz olduğu için operasyon devlete karşı yapıldı ve kiralama açıldı.`;
-    } else {
-      const portOwner = room.players.find(p => p.id === portOwnerId);
-      if (Math.random() < 0.10) {
-        myBuffs.penaltyRatio = 0.30;
-        myBuffs.penaltyRatioTurns = 5;
-        newsFlashMessage += `🚨 SKANDAL İFŞA OLDU! ${portOwner?.name || 'Liman sahibine'} kurulan kumpas ortaya çıktı! Komployu kuran ${playerName}${getPossessiveSuffix(playerName)} 5 tur boyunca tüm gelirleri %30 kesilecek!`;
+    // TAX_AUDIT
+    if (act === 'TAX_AUDIT_A') {
+      pState.balance -= 50000;
+      newsFlashMessage = `\$\{playerName\} 50.000 ₺ rüşvet verdi, Maliye dosyası kapandı.`;
+    } else if (act === 'TAX_AUDIT_B') {
+      cardEffectService.addEffect(room, socketId, 'INCOME_DROP_40', 1);
+      if (Math.random() < 0.3) {
+        playerState.position = 13;
+        if (!room.gameState.jailState) room.gameState.jailState = {};
+        room.gameState.jailState[socketId] = { inJail: true, turnsServed: 0, noSalaryThisTurn: true };
+        newsFlashMessage = `Maliye denetimi sonucu \$\{playerName\} 1 tur gelir kaybına uğradı ve HAPSE GİRDİ!`;
       } else {
-        delete room.gameState.propertyOwnership[5];
-        newsFlashMessage += `⚓ LİMAN SÖZLEŞMESİ İPTAL EDİLDİ! Medyada çıkan belgeler sonrası ${portOwner?.name || 'Liman sahibinin'} sözleşmesi feshedildi ve mülk boşa düştü!`;
+        newsFlashMessage = `Maliye denetimi sonucu \$\{playerName\} 1 tur boyunca %40 gelir kaybına uğrayacak.`;
       }
     }
-  } else if (selectedOption.actionType === 'scandal_penalty') {
-    myBuffs.earningsRatio = 0.30;
-    myBuffs.earningsTurns = 2;
-    newsFlashMessage += `📸 FUHUŞ SKANDALI PATLADI! ${playerName} rüşvet vermeyi reddetti! İtibar kaybından dolayı 2 tur boyunca tüm kazançları %70 düşecek!`;
-  } else if (selectedOption.actionType === 'rent_boost') {
-    myBuffs.rentMultiplier = selectedOption.rentMultiplier || 1.5;
-    myBuffs.rentTurns = selectedOption.turnsLeft || 3;
-    newsFlashMessage += `📈 ${playerName} için 3 tur boyunca 7. Grup kiraları %50 zamlandı!`;
-  } else if (selectedOption.actionType === 'go_bonus') {
-    if (!room.gameState.goBonus) room.gameState.goBonus = {};
-    room.gameState.goBonus[socketId] = (room.gameState.goBonus[socketId] || 0) + (selectedOption.bonusAmount || 150000);
-    newsFlashMessage += `${playerName}, bir sonraki Başlangıç (GO) geçişinde ek +150.000 ₺ prim tahsil edecek!`;
-  } else if (selectedOption.actionType === 'PAY_POLICE_BRIBE') {
-    newsFlashMessage += `🚨 RÜŞVETLE ÖRTBAS! ${playerName} emniyet ve medyaya 80.000 TL ödeyerek oteldeki mafya hesaplaşmasını kapattı.`;
-  } else if (selectedOption.actionType === 'HALT_HOTEL_INCOME') {
-    myBuffs.haltedHotelTurns = 3;
-    newsFlashMessage += `🏨 ${playerName}${getPossessiveSuffix(playerName)} OTELİ MÜHÜRLENDİ! Mafya hesaplaşması basına yansıdı! En lüks oteli 3 tur boyunca kira getirmeyecek!`;
-  } else if (selectedOption.actionType === 'PAY_INSPECTOR_BRIBE') {
-    newsFlashMessage += `🚧 RÜŞVETLE İNŞAAT DEVAM! ${playerName} denetmenlere 40.000 TL ödeyerek deniz kumu kullanılan kentsel dönüşüm projesinin durmasını engelledi.`;
-  } else if (selectedOption.actionType === 'DESTROY_TOP_BUILDINGS') {
-    let topPropId = null;
-    let maxVal = -1;
-    Object.entries(room.gameState.propertyOwnership || {}).forEach(([id, info]) => {
-      if (info.ownerId === socketId && (info.houses || 0) > 0) {
-        const sq = BOARD_DATA.find(s => s.id === Number(id));
-        if (sq) {
-          const val = (sq.price || 0) + (info.houses || 0) * (sq.housePrice || 0);
-          if (val > maxVal) {
-            maxVal = val;
-            topPropId = Number(id);
-          }
-        }
-      }
-    });
-    if (topPropId !== null) {
-      room.gameState.propertyOwnership[topPropId].houses = 0;
+    // BLACK_PROPAGANDA
+    else if (act === 'BLACK_PROPAGANDA_A') {
+      pState.balance -= 80000;
+      newsFlashMessage = `\$\{playerName\} 80.000 ₺ PR bütçesi harcayarak kara propagandayı susturdu.`;
+    } else if (act === 'BLACK_PROPAGANDA_B') {
+      cardEffectService.addEffect(room, socketId, 'RENT_DROP_30', 3);
+      newsFlashMessage = `Sessiz kalındı, \$\{playerName\} mülklerinin kira getirisi 3 tur boyunca %30 düştü.`;
+    }
+    // HACKER_ATTACK
+    else if (act === 'HACKER_ATTACK') {
+      const lost = Math.floor(pState.balance * 0.15);
+      pState.balance -= lost;
+      if (!room.gameState.jailState?.pool) if (!room.gameState.jailState) room.gameState.jailState = { pool: 0 };
+      room.gameState.jailState.pool = (room.gameState.jailState.pool || 0) + lost;
+      newsFlashMessage = `Hackerlar fidye olarak \$\{lost.toLocaleString('tr-TR')\} ₺ (%15) çekti ve Varlık Fonuna aktardı.`;
+    }
+    // SUBSIDY_BONUS
+    else if (act === 'SUBSIDY_BONUS') {
+      const cityCount = Object.keys(room.gameState.propertyOwnership || {}).filter(k => room.gameState.propertyOwnership[k].ownerId === socketId && BOARD_DATA.find(b => b.id === Number(k))?.type === 'property').length;
+      const bonus = cityCount * 20000;
+      pState.balance += bonus;
+      newsFlashMessage = `Devletten \$\{cityCount\} şehir için toplam \$\{bonus.toLocaleString('tr-TR')\} ₺ teşvik alındı.`;
+    }
+    // LOGISTICS_COST
+    else if (act === 'LOGISTICS_COST') {
+      const propCount = Object.keys(room.gameState.propertyOwnership || {}).filter(k => room.gameState.propertyOwnership[k].ownerId === socketId).length;
+      const cost = propCount * 5000;
+      pState.balance -= cost;
+      newsFlashMessage = `\$\{propCount\} mülk için lojistik ve bakım maliyeti olarak \$\{cost.toLocaleString('tr-TR')\} ₺ ödendi.`;
+    }
+    // DARK_CONSORTIUM
+    else if (act === 'DARK_CONSORTIUM_A') {
+      pState.balance += 200000;
+      cardEffectService.addEffect(room, socketId, 'POLICE_RISK_20', 6); // We can just map 6 laps. Wait, 6 laps is too much, it means laps. I'll pass 6.
+      newsFlashMessage = `Karanlık konsorsiyumdan 200.000 ₺ alındı, ancak 6 tur boyunca %20 polis riski var.`;
+    } else if (act === 'DARK_CONSORTIUM_B') {
+      cardEffectService.addEffect(room, socketId, 'DARK_CONSORTIUM_BONUS', 3);
+      newsFlashMessage = `Teklif reddedildi. 3 tur boyunca Başlangıç bonusu %8'e çıktı.`;
+    }
+    // WEALTH_TAX
+    else if (act === 'WEALTH_TAX') {
+      const propCount = Object.keys(room.gameState.propertyOwnership || {}).filter(k => room.gameState.propertyOwnership[k].ownerId === socketId).length;
+      const tax = propCount * 10000;
+      pState.balance -= tax;
+      if (!room.gameState.jailState?.pool) if (!room.gameState.jailState) room.gameState.jailState = { pool: 0 };
+      room.gameState.jailState.pool = (room.gameState.jailState.pool || 0) + tax;
+      newsFlashMessage = `\$\{propCount\} tapu için toplam \$\{tax.toLocaleString('tr-TR')\} ₺ servet vergisi Varlık Fonuna ödendi.`;
+    }
+    // MUNICIPAL_AUDIT
+    else if (act === 'MUNICIPAL_AUDIT_A') {
+      pState.balance -= 40000;
+      newsFlashMessage = `Belediyeye 40.000 ₺ rüşvet verilip denetim raporu kapatıldı.`;
+    } else if (act === 'MUNICIPAL_AUDIT_B') {
+      const propCount = Object.keys(room.gameState.propertyOwnership || {}).filter(k => room.gameState.propertyOwnership[k].ownerId === socketId).length;
+      const penalty = propCount * 7500;
+      pState.balance -= penalty;
+      newsFlashMessage = `\$\{propCount\} mülk için toplam \$\{penalty.toLocaleString('tr-TR')\} ₺ çevre cezası ödendi.`;
+    }
+    // DIVIDEND_PAYOUT
+    else if (act === 'DIVIDEND_PAYOUT') {
       calculatePlayerTotalAssetValue(room, socketId);
-      const sq = BOARD_DATA.find(s => s.id === topPropId);
-      newsFlashMessage += `🏚️ BİNALAR YIKILDI! Belediye denetimi sonucu ${playerName}${getPossessiveSuffix(playerName)} en değerli mülkü #${topPropId} (${sq?.name || 'Mülk'}) üzerindeki tüm ev ve oteller anında yıkıldı!`;
-    } else {
-      newsFlashMessage += `🏚️ ${playerName}${getPossessiveSuffix(playerName)} yıkılacak binası olmadığı için ceza yara almadan atlatıldı.`;
+      const dividend = pState.totalAssetValue < 450000 ? 40000 : 100000;
+      pState.balance += dividend;
+      newsFlashMessage = `Yıl sonu temettü dağıtımından \$\{dividend.toLocaleString('tr-TR')\} ₺ kazanç sağlandı.`;
     }
-  } else if (selectedOption.actionType === 'PAY_HACKER_RANSOM') {
-    newsFlashMessage += `💻 FİDYE ÖDENDİ! ${playerName} siber korsanlara 50.000 TL ödeyerek holding sistemlerinin kilitlenmesini anında açtı.`;
-  } else if (selectedOption.actionType === 'RESET_SYSTEMS_HALT') {
-    myBuffs.haltedBusinessTurns = 2;
-    newsFlashMessage += `⚠️ SİSTEMLER SIFIRLANDI! Siber saldırı nedeniyle ${playerName}${getPossessiveSuffix(playerName)} tüm işletmeleri (Fabrika, Liman, AVM, Hammadde, Medya) 2 tur boyunca kapalı kalacak!`;
-  } else if (selectedOption.actionType === 'GO_TO_JAIL_NO_SALARY') {
-    playerState.position = 13;
-    if (!room.gameState.jailState) room.gameState.jailState = {};
-    room.gameState.jailState[socketId] = { inJail: true, turnsServed: 0, noSalaryThisTurn: true };
-    newsFlashMessage += `🚨 TUTUKLANDI! ${playerName}${getPossessiveSuffix(playerName)} içeriden bilgi ticareti belgelendi ve doğrudan Hapse (Gözaltı karesine) gönderildi!`;
-  } else if (selectedOption.actionType === 'PAY_UNION_DEATH_FINE') {
-    myBuffs.haltedFactoryTurns = 2;
-    newsFlashMessage += `🏭 ÜRETİM DURDU! Sendika liderinin ölümü sonrası ${playerName} 50.000 TL tazminat ödedi, Fabrika ve Hammadde tesisleri 2 tur boyunca kapalı kalacak!`;
-  } else if (selectedOption.actionType === 'PAY_CUSTOMS_FINE') {
-    newsFlashMessage += `🛃 DOSYA KAPANDI! ${playerName} gümrükteki kaçak mal iddiaları için anında 100.000 TL ceza ödeyip dosyayı kapattı.`;
-  } else if (selectedOption.actionType === 'LAWSUIT_CUSTOMS') {
-    if (Math.random() < 0.50) {
-      newsFlashMessage += `⚖️ DAVA KAZANILDI! ${playerName}${getPossessiveSuffix(playerName)} avukatları gümrük davasını mahkemede kazandı ve hiçbir ceza ödenmedi!`;
-    } else {
-      playerState.balance -= 130000;
-      newsFlashMessage += `⚖️ DAVA KAYBEDİLDİ! Mahkeme, ${playerName}${getPossessiveSuffix(playerName)} kaçak malları için 130.000 TL ağır para cezası kesti (-130.000 ₺)!`;
-    }
-  } else if (selectedOption.actionType === 'RIG_IRRIGATION_TENDER') {
-    const hasHammadde = Object.entries(room.gameState.propertyOwnership || {}).some(
-      ([pId, info]) => info.ownerId === socketId && (pId === '12' || pId === '15' || BOARD_DATA.find(b => b.id === Number(pId))?.subType === 'RAW_MATERIAL')
-    );
-    if (hasHammadde) {
-      myBuffs.irrigationTender = { turnsLeft: 5, multiplier: 2 };
-      newsFlashMessage += `🤝 İHALEYE FESAT KARILDI! ${playerName} komisyona 30.000 TL ödedi, Hammadde tesisinden 5 tur boyunca 2 kat üretim ve kira getirisi sağlayacak!`;
-    } else {
-      playerState.balance += 120000;
-      newsFlashMessage += `🤝 İHALEYE FESAT KARILDI! ${playerName} Hammadde Tesisi (#12/#15) olmadığı için 2x Üretim yerine 120.000 ₺ Nakit Teşvik Ödülü aldı (+120.000 ₺)!`;
-    }
-  } else if (selectedOption.actionType === 'TRIGGER_PUBLIC_AUCTION') {
-    newsFlashMessage += `⚡ AÇIK İHALE BAŞLIYOR! ${playerName} tarafından sulama altyapısı ihalesi için tüm oyunculara açık olan 20 saniyelik ihale süreci tetiklendi!`;
-  } else if (selectedOption.actionType === 'RENT_TO_MOVIE_SET') {
-    myBuffs.movieSetHalt = 1;
-    newsFlashMessage += `🎬 DİZİ SETİ KURULDU! ${playerName} ünlü yönetmenin mafya dizisine mülkünü kiraladı (+70.000 ₺)! Ancak set kurulan mülkten 1 tur kira almayacak.`;
-  } else if (selectedOption.actionType === 'SELL_CHEAPEST_PROPERTY_HIGH') {
-    let cheapestPropId = null;
-    let minVal = Infinity;
-    Object.entries(room.gameState.propertyOwnership || {}).forEach(([id, info]) => {
-      if (info.ownerId === socketId) {
-        const sq = BOARD_DATA.find(s => s.id === Number(id));
-        if (sq && sq.type === 'property') {
-          const val = (sq.price || 0) + (info.houses || 0) * (sq.housePrice || 0);
-          if (val < minVal) {
-            minVal = val;
-            cheapestPropId = Number(id);
-          }
-        }
+    // SECRET_TENDER
+    else if (act === 'SECRET_TENDER_A') {
+      if (Math.random() < 0.6) {
+        playerState.position = 13;
+        if (!room.gameState.jailState) room.gameState.jailState = {};
+        room.gameState.jailState[socketId] = { inJail: true, turnsServed: 0, noSalaryThisTurn: true };
+        pState.balance -= 100000;
+        newsFlashMessage = `Gizli ihale bilgisi kullanıldığı tespit edildi! 100.000 ₺ ceza kesildi ve HAPSE girildi.`;
+      } else {
+        newsFlashMessage = `Gizli ihale bilgisiyle risksiz avantaj sağlandı (henüz arsa seçme menüsü entegre değil).`;
       }
-    });
-    if (cheapestPropId !== null) {
-      const sq = BOARD_DATA.find(s => s.id === cheapestPropId);
-      delete room.gameState.propertyOwnership[cheapestPropId];
-      calculatePlayerTotalAssetValue(room, socketId);
-      newsFlashMessage += `🤝 KONSORSİYUM SATIN ALMASI! ${playerName}${getPossessiveSuffix(playerName)} sahip olduğu en ucuz arsa #${cheapestPropId} (${sq?.name || 'Mülk'}) yabancı fona devredildi (+150.000 ₺)!`;
-    } else {
-      newsFlashMessage += `🤝 ${playerName} devredecek arsası olmadığı için sadece +150.000 ₺ hibe aldı.`;
+    } else if (act === 'SECRET_TENDER_B') {
+      pState.balance += 30000;
+      newsFlashMessage = `Etik davranıp ihbar edildi, 30.000 ₺ ödül alındı.`;
     }
-  } else if (selectedOption.actionType === 'SMUGGLE_GOODS_60_40') {
-    if (Math.random() < 0.60) {
-      playerState.balance += 120000;
-      newsFlashMessage += `📦 KAÇAKÇILIK BAŞARILI! Sınır kapısındaki denetimleri atlatarak ülkeye soktuğu elektronik eşyalardan +120.000 ₺ temiz kazanç sağladı!`;
-    } else {
-      playerState.position = 13;
-      if (!room.gameState.jailState) room.gameState.jailState = {};
-      room.gameState.jailState[socketId] = { inJail: true, turnsServed: 0 };
-      newsFlashMessage += `🚨 OPERASYON PATLADI! Sınır kapısında kaçak mallara el konuldu ve oyuncu doğrudan Hapse atıldı!`;
+    // TREASURY_RAID
+    else if (act === 'TREASURY_RAID') {
+      let totalRaid = 0;
+      room.players.forEach(p => {
+        if (room.gameState.playersState[p.id]) {
+          room.gameState.playersState[p.id].balance -= 20000;
+          totalRaid += 20000;
+        }
+      });
+      if (!room.gameState.jailState?.pool) if (!room.gameState.jailState) room.gameState.jailState = { pool: 0 };
+      room.gameState.jailState.pool = (room.gameState.jailState.pool || 0) + totalRaid;
+      newsFlashMessage = `Tüm oyunculardan 20.000 ₺ kesilerek toplam \$\{totalRaid.toLocaleString('tr-TR')\} ₺ Varlık Fonuna aktarıldı.`;
     }
-  } else if (selectedOption.actionType === 'DO_NOTHING') {
-    newsFlashMessage += `🛡️ Riske girmeden yasal rutin ticarete devam etti.`;
+    // ANKARA_FLIGHT
+    else if (act === 'ANKARA_FLIGHT') {
+      playerState.position = 38; // Or specific square for Ankara flight
+      newsFlashMessage = `Acil yönetim kurulu için doğrudan Ankara'ya uçuldu!`;
+    }
+    // STRIKE_ACTION
+    else if (act === 'STRIKE_ACTION_A') {
+      pState.balance -= 60000;
+      newsFlashMessage = `Sendikaya 60.000 ₺ toplu ikramiye ödendi, grev engellendi.`;
+    } else if (act === 'STRIKE_ACTION_B') {
+      cardEffectService.addEffect(room, socketId, 'NO_RENT', 2);
+      newsFlashMessage = `Grev başladı! 2 tur boyunca mülklerden kira alınamayacak.`;
+    }
+    // STATE_THANKS
+    else if (act === 'STATE_THANKS') {
+      pState.balance += 75000;
+      newsFlashMessage = `Cumhurbaşkanlığı'ndan yatırımlar için 75.000 ₺ hibe alındı.`;
+    }
+    // OFFSHORE_TRANSFER
+    else if (act === 'OFFSHORE_TRANSFER_A') {
+      pState.balance -= 15000;
+      newsFlashMessage = `Offshore transfer yasal yapıldı, 15.000 ₺ vergi/kesinti ödendi.`;
+    } else if (act === 'OFFSHORE_TRANSFER_B') {
+      if (Math.random() < 0.4) {
+        playerState.position = 13;
+        if (!room.gameState.jailState) room.gameState.jailState = {};
+        room.gameState.jailState[socketId] = { inJail: true, turnsServed: 0, noSalaryThisTurn: true };
+        cardEffectService.addEffect(room, socketId, 'INCOME_DROP_60', 2);
+        newsFlashMessage = `Kaçak transfer tespit edildi! 2 tur gelir %60 düştü ve HAPSE girildi.`;
+      } else {
+        newsFlashMessage = `Kaçak transfer başarıyla gerçekleşti, iz bırakılmadı.`;
+      }
+    }
+    // DRIVER_SABOTAGE
+    else if (act === 'DRIVER_SABOTAGE_A') {
+      pState.balance -= 5000;
+      newsFlashMessage = `Şoföre rüşvet verilmedi, 5.000 ₺ bahşişle olay kapandı.`;
+    } else if (act === 'DRIVER_SABOTAGE_B') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        const targetState = room.gameState.playersState[target.id];
+        const temp = playerState.position;
+        playerState.position = targetState.position;
+        targetState.position = temp;
+        newsFlashMessage = `Şoförler ayarlandı! \$\{playerName\} ile \$\{target.name\} tahtada yer değiştirdi!`;
+      }
+    }
+    // ZONING_REVISION
+    else if (act === 'ZONING_REVISION_A') {
+      pState.balance -= 35000;
+      newsFlashMessage = `Belediyeye proje onayı için 35.000 ₺ harcandı, imar revizyonu atlatıldı.`;
+    } else if (act === 'ZONING_REVISION_B') {
+      cardEffectService.addEffect(room, socketId, 'PROPERTIES_SEALED', 1);
+      newsFlashMessage = `İmar mahkemeye taşındı, 1 tur boyunca mülkler mühürlendi (kira yok).`;
+    }
+    // CROSS_ALLIANCE
+    else if (act === 'CROSS_ALLIANCE_A') {
+      newsFlashMessage = `Çapraz ittifak teklifi reddedildi.`;
+    } else if (act === 'CROSS_ALLIANCE_B') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        const targetState = room.gameState.playersState[target.id];
+        const amount = Math.floor(targetState.balance * 0.10);
+        targetState.balance -= amount;
+        pState.balance += amount;
+        newsFlashMessage = `İttifak kuruldu! \$\{target.name\} kasasından \$\{amount.toLocaleString('tr-TR')\} ₺ (%10) \$\{playerName\} kasasına geçti!`;
+      }
+    }
+    // R_D_SUPPORT
+    else if (act === 'R_D_SUPPORT_A') {
+      cardEffectService.addEffect(room, socketId, 'RENT_BOOST_30', 2);
+      newsFlashMessage = `Ar-Ge fonu yatırıldı, 2 tur boyunca kiralar %30 arttı!`;
+    } else if (act === 'R_D_SUPPORT_B') {
+      pState.balance += 40000;
+      newsFlashMessage = `Ar-Ge ödülü olarak 40.000 ₺ nakit alındı.`;
+    }
+    // HOSTILE_TAKEOVER
+    else if (act === 'HOSTILE_TAKEOVER_A') {
+      newsFlashMessage = `Riskli operasyon iptal edildi.`;
+    } else if (act === 'HOSTILE_TAKEOVER_B') {
+      cardEffectService.addEffect(room, socketId, 'SEAL_RANDOM_OPPONENT_PROPERTY', 1);
+      newsFlashMessage = `Düşman mülküne sızıldı, bir rakip mülkü geçici mühürlenecek.`;
+    }
+    // ROAD_BLOCK
+    else if (act === 'ROAD_BLOCK') {
+      cardEffectService.addEffect(room, socketId, 'ROAD_BLOCK', 1);
+      newsFlashMessage = `Yol çalışması var! \$\{playerName\} sonraki zar atışında piyonunu hareket ettiremeyecek.`;
+    }
+    // PRESS_SUMMIT
+    else if (act === 'PRESS_SUMMIT_A') {
+      pState.balance -= 50000;
+      cardEffectService.addEffect(room, socketId, 'PRESS_SUMMIT_PROTECT', 1);
+      newsFlashMessage = `Basın patronlarına 50.000 ₺ bütçe aktarıldı, sıradaki negatif ceza sıfırlanacak.`;
+    } else if (act === 'PRESS_SUMMIT_B') {
+      newsFlashMessage = `Basın konseyine para verilmedi, risk göze alındı.`;
+    }
+    // TAX_MARKET
+    else if (act === 'TAX_MARKET') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        cardEffectService.addEffect(room, target.id, 'NO_CREDIT_OR_BUILD', 1);
+        newsFlashMessage = `Maliye markajı! \$\{target.name\} 1 tur boyunca banka işlemi veya inşaat yapamayacak!`;
+      }
+    }
+    // FORCED_AUCTION
+    else if (act === 'FORCED_AUCTION_A') {
+      newsFlashMessage = `Açık artırma zorlaması pas geçildi.`;
+    } else if (act === 'FORCED_AUCTION_B') {
+      newsFlashMessage = `Rakip mülkü ihaleye çıkarma gücü elde edildi.`;
+    }
+    // LOGISTICS_BLOCKADE
+    else if (act === 'LOGISTICS_BLOCKADE_A') {
+      newsFlashMessage = `Lojistik abluka uygulanmadı.`;
+    } else if (act === 'LOGISTICS_BLOCKADE_B') {
+      cardEffectService.addEffect(room, socketId, 'LOGISTICS_BLOCKADE', 1);
+      newsFlashMessage = `Rakip piyonlar sana haraç ödemeden geçemeyecek!`;
+    }
+    // DOUBLE_RENT_TARGET
+    else if (act === 'DOUBLE_RENT_TARGET_A') {
+      newsFlashMessage = `Piyasada sessiz kalındı.`;
+    } else if (act === 'DOUBLE_RENT_TARGET_B') {
+      cardEffectService.addEffect(room, socketId, 'DOUBLE_RENT_TARGET', 1);
+      newsFlashMessage = `Çift kira darbesi aktif! Bir rakip hedef gösterildi.`;
+    }
+    // BLACKMAIL
+    else if (act === 'BLACKMAIL_A') {
+      newsFlashMessage = `Gizli dosyalar imha edildi, şantaj yapılmadı.`;
+    } else if (act === 'BLACKMAIL_B') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        const targetState = room.gameState.playersState[target.id];
+        const amount = Math.floor(targetState.balance * 0.15);
+        targetState.balance -= amount;
+        pState.balance += amount;
+        newsFlashMessage = `Şantaj başarılı! \$\{target.name\} kasasından \$\{amount.toLocaleString('tr-TR')\} ₺ (%15) zorla çekildi.`;
+      }
+    }
+    // TENDER_SABOTAGE
+    else if (act === 'TENDER_SABOTAGE_A') {
+      newsFlashMessage = `İhale sabotajından uzak duruldu.`;
+    } else if (act === 'TENDER_SABOTAGE_B') {
+      cardEffectService.addEffect(room, socketId, 'TENDER_SABOTAGE', 1);
+      newsFlashMessage = `Rakiplerden birinin sıradaki ilk ihale hakkı engellenecek.`;
+    }
+    // FORCED_SWAP
+    else if (act === 'FORCED_SWAP_A') {
+      newsFlashMessage = `Mülk takası zorlamasından kaçınıldı.`;
+    } else if (act === 'FORCED_SWAP_B') {
+      newsFlashMessage = `Zorunlu takas gücü elde edildi!`;
+    }
+    // INJUNCTION
+    else if (act === 'INJUNCTION_A') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        cardEffectService.addEffect(room, target.id, 'INJUNCTION_SEAL', 1);
+        newsFlashMessage = `İhtiyati Tedbir! \$\{target.name\} en değerli mülkünü 1 tur kullanamayacak.`;
+      }
+    }
+    // CREDIT_BLOCK
+    else if (act === 'CREDIT_BLOCK_A') {
+      newsFlashMessage = `Banka blokajına bulaşılmadı.`;
+    } else if (act === 'CREDIT_BLOCK_B') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        cardEffectService.addEffect(room, target.id, 'CREDIT_BLOCK', 1);
+        newsFlashMessage = `Kredi Musluğu Kesildi! \$\{target.name\} 1 tur boyunca kredi çekemeyecek.`;
+      }
+    }
+    // COMMISSION_RAID
+    else if (act === 'COMMISSION_RAID_A') {
+      newsFlashMessage = `Dürüst davranıldı, komisyon alınmadı.`;
+    } else if (act === 'COMMISSION_RAID_B') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        cardEffectService.addEffect(room, target.id, 'COMMISSION_RAID_VICTIM', 1, { beneficiary: socketId });
+        newsFlashMessage = `Gizli Komisyon! \$\{target.name\} ilk mülk alımında %20 fazladan komisyonu \$\{playerName\}'e ödeyecek.`;
+      }
+    }
+    // FORCED_MORTGAGE
+    else if (act === 'FORCED_MORTGAGE_A') {
+      newsFlashMessage = `Zorunlu ipoteğe bulaşılmadı.`;
+    } else if (act === 'FORCED_MORTGAGE_B') {
+      newsFlashMessage = `Rakip mülkünü ipoteğe düşürme hakkı elde edildi.`;
+    }
+    // PRIVATE_JET_JUMP
+    else if (act === 'PRIVATE_JET_JUMP_A') {
+      newsFlashMessage = `Özel jet kullanılmadı, normal ilerlenecek.`;
+    } else if (act === 'PRIVATE_JET_JUMP_B') {
+      newsFlashMessage = `Özel jet hazırlandı, en yakın boş arsaya uçulacak!`;
+    }
+    // INTEL_DOUBLE_DICE
+    else if (act === 'INTEL_DOUBLE_DICE_A') {
+      newsFlashMessage = `İstihbarat kullanılmadı.`;
+    } else if (act === 'INTEL_DOUBLE_DICE_B') {
+      cardEffectService.addEffect(room, socketId, 'GUARANTEED_DOUBLE', 1);
+      newsFlashMessage = `İstihbarat gücüyle bir sonraki zarlar çift (12) kabul edilecek!`;
+    }
+    // MEGA_CONSORTIUM_FUND
+    else if (act === 'MEGA_CONSORTIUM_FUND') {
+      let lowestAsset = Infinity;
+      let targetId = null;
+      room.players.forEach(p => {
+        calculatePlayerTotalAssetValue(room, p.id);
+        const st = room.gameState.playersState[p.id];
+        if (st.totalAssetValue < lowestAsset) {
+          lowestAsset = st.totalAssetValue;
+          targetId = p.id;
+        }
+      });
+      room.players.forEach(p => {
+        if (p.id !== targetId) {
+          room.gameState.playersState[p.id].balance -= 15000;
+          room.gameState.playersState[targetId].balance += 15000;
+        }
+      });
+      const targetName = room.players.find(p => p.id === targetId)?.name || 'Bilinmeyen';
+      newsFlashMessage = `Mega Konsorsiyum! Herkes destek oldu, en dezavantajlı oyuncu \$\{targetName\} büyük fon topladı!`;
+    }
+    // FORCED_PARTNERSHIP
+    else if (act === 'FORCED_PARTNERSHIP_A') {
+      newsFlashMessage = `Ortaklık reddedildi.`;
+    } else if (act === 'FORCED_PARTNERSHIP_B') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        cardEffectService.addEffect(room, target.id, 'FORCED_PARTNERSHIP_VICTIM', 1, { beneficiary: socketId });
+        newsFlashMessage = `Zorunlu Ortaklık! \$\{target.name\} 1 tur boyunca topladığı tüm kiraların %30'unu \$\{playerName\}'e ödeyecek.`;
+      }
+    }
+    // INDUSTRIAL_FAIR
+    else if (act === 'INDUSTRIAL_FAIR_A') {
+      newsFlashMessage = `Fuar masrafına girilmedi.`;
+    } else if (act === 'INDUSTRIAL_FAIR_B') {
+      newsFlashMessage = `Endüstri fuarına sponsor olundu, masrafsız 1 bina dikilecek!`;
+    }
+    // SHORT_SELLING
+    else if (act === 'SHORT_SELLING') {
+      pState.balance += 60000;
+      playerState.position = (playerState.position - 2 + 40) % 40;
+      newsFlashMessage = `Açığa satışla 60.000 ₺ kazanıldı, ancak piyon 2 kare geriye çekildi.`;
+    }
+    // SECRET_RD_PARTNER
+    else if (act === 'SECRET_RD_PARTNER_A') {
+      newsFlashMessage = `Ar-Ge ortaklığı reddedildi.`;
+    } else if (act === 'SECRET_RD_PARTNER_B') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        cardEffectService.addEffect(room, target.id, 'SECRET_RD_VICTIM', 1, { beneficiary: socketId });
+        newsFlashMessage = `Gizli Ortaklık! \$\{target.name\} tesis gelirlerinin yarısını 1 tur boyunca \$\{playerName\} ile paylaşacak.`;
+      }
+    }
+    // HIGH_SPEED_TRAIN
+    else if (act === 'HIGH_SPEED_TRAIN') {
+      newsFlashMessage = `Hızlı trenle en yakın şirkete veya başlangıca ilerleniyor!`;
+    }
+    // LOBBYING_SHIELD
+    else if (act === 'LOBBYING_SHIELD_A') {
+      newsFlashMessage = `Ankara lobisi için bütçe harcanmadı.`;
+    } else if (act === 'LOBBYING_SHIELD_B') {
+      pState.balance -= 60000;
+      cardEffectService.addEffect(room, socketId, 'LOBBYING_SHIELD', 2);
+      newsFlashMessage = `60.000 ₺ harcandı. 2 tur boyunca negatif kart etkilerinden ve sabotajlardan korunulacak.`;
+    }
+    // BUY_MORTGAGED_PROPERTY
+    else if (act === 'BUY_MORTGAGED_PROPERTY_A') {
+      newsFlashMessage = `İpotekli mülk satışı pas geçildi.`;
+    } else if (act === 'BUY_MORTGAGED_PROPERTY_B') {
+      newsFlashMessage = `Rakibin ipotekli mülkünü zorla satın alma hakkı elde edildi.`;
+    }
+    // REGULATORY_PRESSURE
+    else if (act === 'REGULATORY_PRESSURE_A') {
+      newsFlashMessage = `Denetim baskısından kaçınıldı.`;
+    } else if (act === 'REGULATORY_PRESSURE_B') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        cardEffectService.addEffect(room, target.id, 'REGULATORY_PRESSURE_VICTIM', 1);
+        newsFlashMessage = `Düzenleyici Kurum Baskını! \$\{target.name\} mülkleri 1 tur denetime girdi.`;
+      }
+    }
+    // LEASE_BUSINESS
+    else if (act === 'LEASE_BUSINESS_A') {
+      newsFlashMessage = `İşletme kiralanmadı.`;
+    } else if (act === 'LEASE_BUSINESS_B') {
+      pState.balance -= 100000;
+      newsFlashMessage = `100.000 ₺ ödendi. Seçilecek tesis 5 tur boyunca gelir ortaklığı getirecek.`;
+    }
+    // SOLIDARITY_FUND
+    else if (act === 'SOLIDARITY_FUND') {
+      let lowestAsset = Infinity;
+      let targetId = null;
+      room.players.forEach(p => {
+        calculatePlayerTotalAssetValue(room, p.id);
+        const st = room.gameState.playersState[p.id];
+        if (st.totalAssetValue < lowestAsset) {
+          lowestAsset = st.totalAssetValue;
+          targetId = p.id;
+        }
+      });
+      room.players.forEach(p => {
+        if (p.id !== targetId) {
+          room.gameState.playersState[p.id].balance -= 70000;
+          room.gameState.playersState[targetId].balance += 70000;
+        }
+      });
+      const targetName = room.players.find(p => p.id === targetId)?.name || 'Bilinmeyen';
+      newsFlashMessage = `Dayanışma Fonu! Tüm oyuncular 70.000 ₺ aktararak en gerideki \$\{targetName\}'i kurtardı.`;
+    }
+    // DUAL_COMMISSION_NETWORK
+    else if (act === 'DUAL_COMMISSION_NETWORK_A') {
+      newsFlashMessage = `Komisyon ağı kurulmadı.`;
+    } else if (act === 'DUAL_COMMISSION_NETWORK_B') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        cardEffectService.addEffect(room, target.id, 'DUAL_COMMISSION_VICTIM', 3, { beneficiary: socketId });
+        newsFlashMessage = `Çift Yönlü Komisyon! \$\{target.name\} 3 tur boyunca arsa ödemelerinde %20, kiralarında %30 komisyon ödeyecek.`;
+      }
+    }
+    // LEAK_FINANCIAL_REPORTS
+    else if (act === 'LEAK_FINANCIAL_REPORTS') {
+      cardEffectService.addEffect(room, socketId, 'LEAK_FINANCIAL_REPORTS', 3);
+      newsFlashMessage = `Büyük Sızıntı! 3 tur boyunca tüm finansal raporlar şeffaf hale geldi.`;
+    }
+    // SUMMON_PLAYER
+    else if (act === 'SUMMON_PLAYER_A') {
+      newsFlashMessage = `Zirve daveti iptal edildi.`;
+    } else if (act === 'SUMMON_PLAYER_B') {
+      const opponents = room.players.filter(p => p.id !== socketId);
+      if (opponents.length > 0) {
+        const target = opponents[Math.floor(Math.random() * opponents.length)];
+        const targetState = room.gameState.playersState[target.id];
+        targetState.position = playerState.position;
+        newsFlashMessage = `Acil Zirve! \$\{target.name\} doğrudan \$\{playerName\} yanına ışınlandı!`;
+      }
+    }
+    // FREE_HOTEL_BUILD
+    else if (act === 'FREE_HOTEL_BUILD') {
+      newsFlashMessage = `Bedelsiz otel teşviki! En düşük seviyeli şehre 1 adet otel dikilecek.`;
+    } else {
+      newsFlashMessage = `Kart \$\{card.title\} etkisini gösterdi.`;
+    }
   }
 
-  const hasHushOption = card.optionA?.actionType === 'bribe_media' || card.optionB?.actionType === 'bribe_media';
-  const choseHushOption = selectedOption.actionType === 'bribe_media';
-  const isCrisis = !choseHushOption && (hasHushOption || selectedOption.actionType === 'pay_compensation' || selectedOption.actionType === 'penalty' || card.isScandal === true);
+  newsFlashTitle = `📰 BORSADA SON DAKİKA: \$\{card.title.toUpperCase()\}`;
 
+  const isCrisis = card.type === 'crisis' || card.isScandal === true;
   const isDouble = waiting.isDouble;
   delete room.gameState.waitingForChanceDecision;
 
@@ -2829,4 +3120,365 @@ export function submitBorsaInvestment(socketId, amount) {
 
 export function playCasinoAction(socketId, betAmount, result) {
   return { success: false, error: 'Kumarhane sistemi geçici olarak devre dışıdır.' };
+}
+
+
+/**
+ * MAHKEME SALONU (COURTROOM ENGINE) VE ADALET TEPER MEKANİĞİ
+ */
+export function startCourtroomSession(room, defendantSocketId, isDouble = false) {
+  if (!room || !room.gameState) return null;
+
+  const defendant = room.players.find(p => p.id === defendantSocketId);
+  if (!defendant) return null;
+
+  let prosecutor = room.players.find(p => p.id === room.createdBy);
+  if (!prosecutor) prosecutor = room.players[0];
+
+  if (prosecutor.id === defendantSocketId && room.players.length > 1) {
+    prosecutor = room.players.find(p => p.id !== defendantSocketId) || prosecutor;
+  }
+
+  const crime = COURTROOM_CRIMES[Math.floor(Math.random() * COURTROOM_CRIMES.length)];
+
+  if (room.courtroomTimer) {
+    clearTimeout(room.courtroomTimer);
+    room.courtroomTimer = null;
+  }
+
+  const durationSeconds = 40; // Preparation phase duration
+  const courtroomState = {
+    active: true,
+    crime,
+    defendantId: defendantSocketId,
+    defendantName: defendant.name,
+    prosecutorId: prosecutor.id,
+    prosecutorName: prosecutor.name,
+    phase: 'PREPARATION',
+    durationSeconds,
+    phaseEndTime: Date.now() + (durationSeconds * 1000),
+    votes: {},
+    finalVerdict: null,
+    resultMessage: '',
+    isBackfire: false,
+    isDouble
+  };
+
+  room.gameState.courtroomState = courtroomState;
+
+  scheduleCourtroomPhaseTransition(room.code, 'DEFENSE', 40000);
+
+  if (room.ioInstance) {
+    room.ioInstance.to(room.code).emit('server:courtroomStarted', { courtroomState });
+    room.ioInstance.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
+  }
+
+  return courtroomState;
+}
+
+function scheduleCourtroomPhaseTransition(roomCode, nextPhase, delayMs) {
+  const room = rooms.get(roomCode);
+  if (!room) return;
+
+  if (room.courtroomTimer) {
+    clearTimeout(room.courtroomTimer);
+  }
+
+  room.courtroomTimer = setTimeout(() => {
+    advanceCourtroomPhase(roomCode, nextPhase);
+  }, delayMs);
+}
+
+export function advanceCourtroomPhase(roomCode, forcedNextPhase = null) {
+  const room = rooms.get(roomCode);
+  if (!room || !room.gameState || !room.gameState.courtroomState || !room.gameState.courtroomState.active) return;
+
+  const state = room.gameState.courtroomState;
+  let nextPhase = forcedNextPhase;
+
+  if (!nextPhase) {
+    if (state.phase === 'PREPARATION') nextPhase = 'DEFENSE';
+    else if (state.phase === 'DEFENSE') nextPhase = 'JURY_VOTING';
+    else if (state.phase === 'JURY_VOTING') nextPhase = 'PROSECUTOR_VERDICT';
+    else if (state.phase === 'PROSECUTOR_VERDICT') {
+      const votes = Object.values(state.votes || {});
+      const beraatCount = votes.filter(v => v === 'BERAAT').length;
+      const hapisCount = votes.filter(v => v === 'HAPIS').length;
+      const autoVerdict = hapisCount > beraatCount ? 'HAPIS' : 'BERAAT';
+      submitProsecutorVerdict(state.prosecutorId, autoVerdict);
+      return;
+    }
+  }
+
+  if (!nextPhase) return;
+
+  state.phase = nextPhase;
+  let nextDuration = 60;
+  if (nextPhase === 'DEFENSE') nextDuration = 60;
+  else if (nextPhase === 'JURY_VOTING') nextDuration = 10;
+  else if (nextPhase === 'PROSECUTOR_VERDICT') nextDuration = 15;
+
+  state.durationSeconds = nextDuration;
+  state.phaseEndTime = Date.now() + (nextDuration * 1000);
+
+  if (nextPhase === 'DEFENSE') {
+    scheduleCourtroomPhaseTransition(roomCode, 'JURY_VOTING', 60000);
+  } else if (nextPhase === 'JURY_VOTING') {
+    scheduleCourtroomPhaseTransition(roomCode, 'PROSECUTOR_VERDICT', 10000);
+  } else if (nextPhase === 'PROSECUTOR_VERDICT') {
+    scheduleCourtroomPhaseTransition(roomCode, null, 15000);
+  }
+
+  if (room.ioInstance) {
+    room.ioInstance.to(roomCode).emit('server:courtroomPhaseUpdate', { courtroomState: state });
+    room.ioInstance.to(roomCode).emit('server:gameStateUpdate', { gameState: room.gameState });
+  }
+}
+
+export function submitJuryVote(socketId, vote) {
+  const code = socketToRoom.get(socketId);
+  if (!code) return { success: false, error: 'Oda bulunamadı.' };
+  const room = rooms.get(code);
+  if (!room || !room.gameState || !room.gameState.courtroomState) {
+    return { success: false, error: 'Aktif mahkeme oturumu bulunamadı.' };
+  }
+
+  const state = room.gameState.courtroomState;
+  if (state.phase !== 'JURY_VOTING') {
+    return { success: false, error: 'Oy verme aşamasında değilsiniz.' };
+  }
+
+  if (socketId === state.defendantId) {
+    return { success: false, error: 'Sanık oy kullanamaz.' };
+  }
+
+  if (vote !== 'BERAAT' && vote !== 'HAPIS') {
+    return { success: false, error: 'Geçersiz oy seçeneği.' };
+  }
+
+  state.votes[socketId] = vote;
+
+  const juryMembers = room.players.filter(p => p.id !== state.defendantId && p.id !== state.prosecutorId);
+  const totalVotesCount = Object.keys(state.votes).length;
+
+  if (room.ioInstance) {
+    room.ioInstance.to(code).emit('server:courtroomVoteUpdate', { courtroomState: state });
+  }
+
+  if (juryMembers.length > 0 && totalVotesCount >= juryMembers.length) {
+    advanceCourtroomPhase(code, 'PROSECUTOR_VERDICT');
+  }
+
+  return { success: true, courtroomState: state };
+}
+
+export function submitProsecutorVerdict(socketId, verdict) {
+  const code = socketToRoom.get(socketId);
+  if (!code) return { success: false, error: 'Oda bulunamadı.' };
+  const room = rooms.get(code);
+  if (!room || !room.gameState || !room.gameState.courtroomState) {
+    return { success: false, error: 'Aktif mahkeme oturumu bulunamadı.' };
+  }
+
+  const state = room.gameState.courtroomState;
+  if (socketId !== state.prosecutorId && socketId !== 'SYSTEM') {
+    return { success: false, error: 'Sadece Savcı/Hakim karar verebilir.' };
+  }
+
+  if (verdict !== 'BERAAT' && verdict !== 'HAPIS') {
+    return { success: false, error: 'Geçersiz karar.' };
+  }
+
+  if (room.courtroomTimer) {
+    clearTimeout(room.courtroomTimer);
+    room.courtroomTimer = null;
+  }
+
+  const votes = Object.values(state.votes || {});
+  const beraatCount = votes.filter(v => v === 'BERAAT').length;
+  const hapisCount = votes.filter(v => v === 'HAPIS').length;
+
+  // Adalet Teper (Justice Backfires / Yetki İstismarı) Check:
+  const isBeraatMajority = beraatCount > hapisCount || (beraatCount > 0 && hapisCount === 0);
+  const isBackfire = isBeraatMajority && verdict === 'HAPIS';
+
+  state.finalVerdict = verdict;
+  state.phase = 'RESOLVED';
+  state.durationSeconds = 0;
+  state.phaseEndTime = Date.now();
+
+  const defState = room.gameState.playersState[state.defendantId];
+  const prosState = room.gameState.playersState[state.prosecutorId];
+
+  if (isBackfire) {
+    state.isBackfire = true;
+    state.resultMessage = `🔥 ADALET TEPTİ! Savcı ${state.prosecutorName} Yetkisini Kötüye Kullandığı İçin Hapse Atıldı, ${state.defendantName} Serbest!`;
+
+    if (prosState) {
+      prosState.position = 13;
+      if (!room.gameState.jailState) room.gameState.jailState = {};
+      room.gameState.jailState[state.prosecutorId] = { inJail: true, turnsServed: 0, noSalaryThisTurn: true };
+    }
+  } else if (verdict === 'BERAAT') {
+    state.resultMessage = `⚖️ MAHKEME KARARI: ${state.defendantName} hakkında BERAAT kararı verildi! Serbest bırakıldı.`;
+  } else {
+    state.resultMessage = `🔒 MAHKEME KARARI: ${state.defendantName} hakkında HAPİS kararı tescillendi! 1 tur Hapse gönderildi.`;
+
+    if (defState) {
+      defState.position = 13;
+      if (!room.gameState.jailState) room.gameState.jailState = {};
+      room.gameState.jailState[state.defendantId] = { inJail: true, turnsServed: 0, noSalaryThisTurn: true };
+    }
+  }
+
+  if (room.ioInstance) {
+    room.ioInstance.to(code).emit('server:courtroomEnded', { courtroomState: state });
+    room.ioInstance.to(code).emit('server:logMessage', {
+      message: state.resultMessage,
+      type: isBackfire ? 'error' : (verdict === 'BERAAT' ? 'success' : 'warning')
+    });
+    room.ioInstance.to(code).emit('server:gameStateUpdate', { gameState: room.gameState });
+  }
+
+  setTimeout(() => {
+    delete room.gameState.courtroomState;
+    advanceToNextTurn(room, state.isDouble);
+    if (room.ioInstance) {
+      room.ioInstance.to(code).emit('server:gameStateUpdate', { gameState: room.gameState });
+    }
+  }, 6000);
+
+  return { success: true, courtroomState: state };
+}
+
+
+/**
+ * İLLEGAL GÖREV İLERLEME VE DENETİM METODLARI
+ */
+export function checkPlayerQuestOnRoll(room, socketId, diceTotal) {
+  if (!room || !room.gameState || !room.gameState.activePlayerQuests) return;
+  const quest = room.gameState.activePlayerQuests[socketId];
+  if (!quest) return;
+
+  const playerState = room.gameState.playersState[socketId];
+  const activePlayer = room.players.find(p => p.id === socketId);
+  const playerName = activePlayer?.name || 'Oyuncu';
+
+  quest.currentRolls = (quest.currentRolls || 0) + 1;
+
+  if (quest.id === 'ILLEGAL_1') {
+    quest.tilesMoved = (quest.tilesMoved || 0) + diceTotal;
+    if (quest.tilesMoved >= 30) {
+      playerState.balance += 100000;
+      delete room.gameState.activePlayerQuests[socketId];
+      if (room.ioInstance) {
+        room.ioInstance.to(room.code).emit('server:logMessage', {
+          message: '🚀 İLLEGAL GÖREV BAŞARILI! ' + playerName + ' kaçak konteynerları 30 kare ilerleterek çıkardı (+100.000 ₺ kâr)!',
+          type: 'success'
+        });
+      }
+    } else if (quest.currentRolls >= 3) {
+      let topPropId = null;
+      let maxVal = -1;
+      Object.entries(room.gameState.propertyOwnership || {}).forEach(([id, info]) => {
+        if (info.ownerId === socketId) {
+          const sq = BOARD_DATA.find(s => s.id === Number(id));
+          if (sq) {
+            const val = sq.price || 0;
+            if (val > maxVal) { maxVal = val; topPropId = Number(id); }
+          }
+        }
+      });
+      if (topPropId !== null) {
+        delete room.gameState.propertyOwnership[topPropId];
+      }
+      delete room.gameState.activePlayerQuests[socketId];
+      if (room.ioInstance) {
+        room.ioInstance.to(room.code).emit('server:logMessage', {
+          message: '🚨 İLLEGAL GÖREV BAŞARISIZ! ' + playerName + ' 3 zar atışında 30 kareye ulaşamadı. En değerli mülkü devlete geçti!',
+          type: 'error'
+        });
+      }
+    }
+  } else if (quest.id === 'ILLEGAL_2') {
+    if (quest.currentRolls >= 2 && quest.currentLaps < 1) {
+      const penaltyCash = Math.floor(playerState.balance * 0.30);
+      playerState.balance -= penaltyCash;
+      delete room.gameState.activePlayerQuests[socketId];
+      if (room.ioInstance) {
+        room.ioInstance.to(room.code).emit('server:logMessage', {
+          message: `🚨 İLLEGAL GÖREV BAŞARISIZ! ${playerName} 2 zarda sınırdan geçemedi. Kasasının %30'una (-${penaltyCash.toLocaleString('tr-TR')} ₺) el konuldu!`,
+          type: 'error'
+        });
+      }
+    }
+  }
+}
+
+export function checkPlayerQuestOnPassGo(room, socketId) {
+  if (!room || !room.gameState || !room.gameState.activePlayerQuests) return;
+  const quest = room.gameState.activePlayerQuests[socketId];
+  if (!quest) return;
+
+  const playerState = room.gameState.playersState[socketId];
+  const activePlayer = room.players.find(p => p.id === socketId);
+  const playerName = activePlayer?.name || 'Oyuncu';
+
+  quest.currentLaps = (quest.currentLaps || 0) + 1;
+
+  if (quest.id === 'ILLEGAL_2') {
+    if (quest.currentLaps >= 1) {
+      playerState.balance += 150000;
+      delete room.gameState.activePlayerQuests[socketId];
+      if (room.ioInstance) {
+        room.ioInstance.to(room.code).emit('server:logMessage', {
+          message: '🚀 İLLEGAL GÖREV BAŞARILI! ' + playerName + ' zamanında Başlangıç çizgisinden geçerek transit sevkiyatı tamamladı (+150.000 ₺)!',
+          type: 'success'
+        });
+      }
+    }
+  } else if (quest.id === 'ILLEGAL_3') {
+    if (quest.currentLaps >= 2) {
+      playerState.balance += 120000;
+      delete room.gameState.activePlayerQuests[socketId];
+      if (room.ioInstance) {
+        room.ioInstance.to(room.code).emit('server:logMessage', {
+          message: '🚀 İLLEGAL GÖREV BAŞARILI! ' + playerName + ' 2 tur boyunca hiçbir ceza karesine basmadan Kırmızı Hat sevkiyatını bitirdi (+120.000 ₺)!',
+          type: 'success'
+        });
+      }
+    }
+  } else if (quest.id === 'ILLEGAL_4') {
+    if (quest.currentLaps >= 2) {
+      playerState.balance -= 80000;
+      delete room.gameState.activePlayerQuests[socketId];
+      if (room.ioInstance) {
+        room.ioInstance.to(room.code).emit('server:logMessage', {
+          message: '🚨 İLLEGAL GÖREV BAŞARISIZ! ' + playerName + ' 2 tur içinde mülk edinemedi. 80.000 ₺ Kara Para Cezası kesildi!',
+          type: 'error'
+        });
+      }
+    }
+  }
+}
+
+export function checkPlayerQuestOnAcquire(room, socketId, cost) {
+  if (!room || !room.gameState || !room.gameState.activePlayerQuests) return;
+  const quest = room.gameState.activePlayerQuests[socketId];
+  if (!quest || quest.id !== 'ILLEGAL_4') return;
+
+  const playerState = room.gameState.playersState[socketId];
+  const activePlayer = room.players.find(p => p.id === socketId);
+  const playerName = activePlayer?.name || 'Oyuncu';
+
+  const refund = Math.floor((cost || 0) * 0.50);
+  playerState.balance += 50000 + refund;
+  delete room.gameState.activePlayerQuests[socketId];
+
+  if (room.ioInstance) {
+    room.ioInstance.to(room.code).emit('server:logMessage', {
+      message: '🚀 İLLEGAL GÖREV BAŞARILI! ' + playerName + ' içeriden bilgiyle mülk satın aldı (+50.000 ₺ bonus + ' + refund.toLocaleString('tr-TR') + ' ₺ harcama iadesi)!',
+      type: 'success'
+    });
+  }
 }

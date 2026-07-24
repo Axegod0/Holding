@@ -54,9 +54,10 @@ export const BOARD_DATA = [
     color: '#38BDF8'
   },
   {
-    id: 7, type: 'chance',
-    name: 'Şans Kartı',
-    color: '#F59E0B'
+    id: 7, type: 'ILLEGAL_JOB_TILE',
+    name: 'İllegal İşler',
+    subtitle: 'Kaçak Lojistik Operasyonu',
+    color: '#DC2626'
   },
   {
     id: 8, type: 'property',
@@ -196,9 +197,10 @@ export const BOARD_DATA = [
     color: '#FACC15'
   },
   {
-    id: 28, type: 'chance',
-    name: 'Şans Kartı', subtitle: 'Piyasa Haberi',
-    color: '#F59E0B'
+    id: 28, type: 'ILLEGAL_JOB_TILE',
+    name: 'İllegal İşler',
+    subtitle: 'Kaçak Lojistik Operasyonu',
+    color: '#DC2626'
   },
   {
     id: 29, type: 'MEDIA', subType: 'MEDIA',
@@ -231,10 +233,10 @@ export const BOARD_DATA = [
 
   // ───────────────── SAĞ KENAR (Yukarı → Aşağı): 33 → 39 ─────────────────
   {
-    id: 33, type: 'CASINO',
-    name: 'Yeraltı Kumarhanesi',
-    subtitle: 'Blackjack Masası',
-    color: '#10B981'
+    id: 33, type: 'COURTROOM',
+    name: 'Mahkeme Salonu',
+    subtitle: 'Adalet Karesi',
+    color: '#DC2626'
   },
   {
     id: 34, type: 'chance',

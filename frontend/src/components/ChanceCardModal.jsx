@@ -90,11 +90,11 @@ export default function ChanceCardModal() {
                         <span className="text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-500/30">
                           +{(-optionA.cost).toLocaleString('tr-TR')} ₺ Giriş
                         </span>
-                      ) : (
+                      ) : optionA?.cost === 0 ? (
                         <span className="text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-500/30">
                           Masrafsız / Yatırım
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     <p className="text-xs mt-1 transition-colors text-neutral-600 dark:text-neutral-400 dark:group-hover:text-neutral-300">
                       {optionA?.description}
@@ -120,11 +120,11 @@ export default function ChanceCardModal() {
                         <span className="text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-500/30">
                           +{(-optionB.cost).toLocaleString('tr-TR')} ₺ Giriş
                         </span>
-                      ) : (
+                      ) : optionB?.cost === 0 ? (
                         <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md border bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-neutral-700">
                           Masrafsız
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     <p className="text-xs mt-1 transition-colors text-neutral-600 dark:text-neutral-400 dark:group-hover:text-neutral-300">
                       {optionB?.description}

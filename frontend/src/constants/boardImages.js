@@ -48,7 +48,7 @@ export const BOARD_IMAGES = {
   32: 'https://thekalucci.com/cdn/shop/files/preview_images/A_KSD_NORMAL_4K_3840_2160_H.265_0649.jpg?v=1697896738', // Aydın
 
   // SAĞ KENAR (33 - 39)
-  33: 'https://static.wikia.nocookie.net/kurtlar-vadisi/images/e/e8/CakirKumarhane.png/revision/latest/scale-to-width-down/1200?cb=20250411001350&path-prefix=tr', // Yeraltı Kumarhanesi
+  33: 'https://web-cdnprod.aa.com.tr/uploads/Contents/2019/08/21/thumbs_b_c_1fc26b680fa68d69e9ae4ea094bb513a.jpg', // Mahkeme
   34: 'https://creativegroup-blog-prd-eu-west-1-recharge-blog.s3.eu-west-1.amazonaws.com/blog/wp-content/uploads/2023/04/17125540/Does_an_anonymous_SIM_card_exist_RE.jpg', // Şans Kartı
   35: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRp3gwgo4OGw911RSG-kxG3xZjDlaSbIbqOB44nKa5tMNPIdzyoTAc-B_w&s=10', // AVM
   36: 'https://ziraatodasi.gen.tr/wp-content/uploads/2021/01/vergi-2.jpg', // Servet Vergisi

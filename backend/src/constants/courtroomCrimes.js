@@ -1,0 +1,22 @@
+export const COURTROOM_CRIMES = [
+  "Kırmızı ışıkta geçerken rakip holdingin makam aracına çamur sıçratmak ve korna basıp kaçmak.",
+  "Yönetim kurulu toplantısına pazardan alınma eşofmanla gelip 'Ben vibe coding yapıyorum' demek.",
+  "Şirket buzdolabındaki başkasına ait etiketli lahmacunları ve soğuk çayları gizlice yemek.",
+  "Gece saat 03:00'te WhatsApp grubuna 'Acil Zirve' mesajı atıp kimseden cevap alamayınca şirketi satmaya çalışmak.",
+  "Ofisteki espresso makinesine kireç sökücü yerine deniz suyu koyup tüm yönetim kurulunu hastanelik etmek.",
+  "İnşaat alanında baret takmayıp 'Bize bir şey olmaz hemşerim' diyerek denetçiye baret fırlatmak.",
+  "Rakip CEO'nun 5 yıl önceki LinkedIn gönderisine yanlışlıkla 'Alev' emojisi atıp ticari sır ihlalinde bulunmak.",
+  "Tapu dairesinde sıra beklememek için 'Ben Maliye Bakanı'nın teyzesinin oğluyum' yalanını söylemek.",
+  "Şirket kasasından gizlice 50.000 TL çekip Telegram grubunda gördüğü Shitcoin'e yatırmak.",
+  "Zoom toplantısında mikrofonu ve kamerayı açık unutup arka planda erik dalı oynamak.",
+  "Büyük ihale öncesi rakiplerin ikram çayına gizlice papatya çayı katıp herkesi masada uyutmak.",
+  "Trafikte emniyet şeridinden gidip polise 'Makam aracıyla börek yetiştiriyorum' demek.",
+  "Park yasağı olan yere makam aracını çekip çekiciye 'Sen benim kim olduğumu biliyor musun?' yapmak.",
+  "Şirketin ana veri sunucularını kapatıp üzerinde kaçak Counter-Strike turnuvası düzenlemek.",
+  "İş görüşmesinde İngilizce seviyesine 'Advanced' yazıp 'How are you?' sorusuna 'Yes, I am' demek.",
+  "Vergi dairesine elinde fidanla gidip 'Ben vergimi doğaya ödedim' açıklaması yapmak.",
+  "Şirket asansöründe gaz çıkarıp suçu yanındaki stajyere atarak işine son verdirmek.",
+  "Rakip firmanın reklam panosuna gece gizlice sprey boyayla 'En büyük bizim holding' yazmak.",
+  "Hisse değerini yükseltmek için TikTok'ta 'Bu hisseyi alan yarın Ferrari çekiyor' videosu çekmek.",
+  "Şirket kredi kartıyla kendi Twitch yayıncı hesabına gizlice Donate atıp kasayı sıfırlamak."
+];

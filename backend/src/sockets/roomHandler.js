@@ -1,3 +1,4 @@
+import { createGuestProfile, registerAccount, loginAccount } from '../state/authService.js';
 import {
   createRoom,
   joinRoom,
@@ -27,6 +28,8 @@ import {
   respondSwapOffer,
   submitBorsaInvestment,
   playCasinoAction,
+  submitJuryVote,
+  submitProsecutorVerdict,
   getRoomBySocketId
 } from '../state/roomStore.js';
 import { CHANCE_CARDS } from '../constants/chanceCards.js';
@@ -595,6 +598,79 @@ export function registerRoomHandlers(io, socket) {
     }
     io.to(room.code).emit('server:gameStateUpdate', { gameState: room.gameState });
     callback({ success: true, result });
+  });
+
+
+
+  // --- AUTH SYSTEM HANDLERS ---
+  socket.on('client:guestLogin', (data, callback) => {
+    const profile = createGuestProfile();
+    if (typeof callback === 'function') callback({ success: true, profile });
+  });
+
+  socket.on('client:registerAccount', (data, callback) => {
+    const res = registerAccount(data || {});
+    if (typeof callback === 'function') callback(res);
+  });
+
+  socket.on('client:loginAccount', (data, callback) => {
+    const res = loginAccount(data || {});
+    if (typeof callback === 'function') callback(res);
+  });
+
+  // --- CANLI CHAT VE SİSTEM LOG PANELİ HANDLERS ---
+  socket.on('client:sendChatMessage', ({ message }, callback) => {
+    const room = getRoomBySocketId(socket.id);
+    if (!room) return;
+
+    const sender = room.players.find(p => p.id === socket.id);
+    const senderName = sender?.name || 'Oyuncu';
+
+    const msgObj = {
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      senderId: socket.id,
+      senderName,
+      message: (message || '').trim().substring(0, 200),
+      timestamp: Date.now(),
+      tab: 'GLOBAL_CHAT'
+    };
+
+    if (!room.chatMessages) room.chatMessages = [];
+    room.chatMessages.push(msgObj);
+
+    io.to(room.code).emit('server:chatMessage', msgObj);
+    if (typeof callback === 'function') callback({ success: true, message: msgObj });
+  });
+
+  socket.on('client:sendCourtChatMessage', ({ message }, callback) => {
+    const room = getRoomBySocketId(socket.id);
+    if (!room) return;
+
+    const sender = room.players.find(p => p.id === socket.id);
+    const senderName = sender?.name || 'Oyuncu';
+
+    const msgObj = {
+      id: 'court_msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      senderId: socket.id,
+      senderName,
+      message: (message || '').trim().substring(0, 200),
+      timestamp: Date.now(),
+      tab: 'COURT_CHAT'
+    };
+
+    io.to(room.code).emit('server:courtChatMessage', msgObj);
+    if (typeof callback === 'function') callback({ success: true, message: msgObj });
+  });
+
+  // MAHKEME SALONU (COURTROOM ENGINE) ETKİLEŞİMLERİ
+  socket.on('client:submitJuryVote', ({ vote }, callback) => {
+    const res = submitJuryVote(socket.id, vote);
+    if (typeof callback === 'function') callback(res);
+  });
+
+  socket.on('client:submitProsecutorVerdict', ({ verdict }, callback) => {
+    const res = submitProsecutorVerdict(socket.id, verdict);
+    if (typeof callback === 'function') callback(res);
   });
 
   // MULTIPLAYER CASINO İŞLEMLERİ (GECICI OLARAK DEVRE DISI)

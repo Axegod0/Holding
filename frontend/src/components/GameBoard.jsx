@@ -19,6 +19,9 @@ import SwapOfferModal from './SwapOfferModal.jsx';
 import SwapPanel from './SwapPanel.jsx';
 import FinancialModal from './FinancialModal.jsx';
 import ChanceCardModal from './ChanceCardModal.jsx';
+import CourtroomModal from './CourtroomModal.jsx';
+import ChatAndLogPanel from './ChatAndLogPanel.jsx';
+import IllegalJobModal from './IllegalJobModal.jsx';
 import BorsaInvestmentModal from './BorsaInvestmentModal.jsx';
 import DiceRollerAnimation from './DiceRollerAnimation.jsx';
 import NewsFlashModal from './NewsFlashModal.jsx';
@@ -184,6 +187,9 @@ export default function GameBoard() {
       <AuctionCountdownModal />
       <FinancialModal />
       <ChanceCardModal />
+      <CourtroomModal />
+      <IllegalJobModal />
+      <ChatAndLogPanel />
       <BorsaInvestmentModal />
       <DiceRollerAnimation />
       <NewsFlashModal />

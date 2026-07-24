@@ -18,6 +18,8 @@ export const useGameStore = create((set, get) => ({
   loading: false,
   toast: { show: false, type: 'info', message: '' },
   error: null,
+  currentUser: (() => { try { return JSON.parse(localStorage.getItem('holding_user_profile')); } catch(e){ return null; } })(),
+  setCurrentUser: (user) => set({ currentUser: user }),
 
   // Çekirdek Oyun & Ekonomi Motoru Durumları
   gameState: null,
