@@ -4,8 +4,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: holding-backend
-    ports:
-      - "3000:3000"
+    # Backend'i dışarıya açma — sadece frontend nginx üzerinden erişilir
+    expose:
+      - "3000"
     environment:
       - PORT=3000
       - NODE_ENV=production
