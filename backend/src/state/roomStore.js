@@ -711,8 +711,10 @@ export function rollDice(socketId) {
   const newPosition = (oldPosition + diceTotal) % 40;
   playerState.position = newPosition;
 
+  const targetSquare = BOARD_DATA.find(s => s.id === newPosition);
+
   // İllegal İşler / Kaçak Lojistik (Kare 7 veya 28) Kontrolü
-  if (targetSquare.type === 'ILLEGAL_JOB_TILE' || newPosition === 7 || newPosition === 28) {
+  if ((targetSquare && targetSquare.type === 'ILLEGAL_JOB_TILE') || newPosition === 7 || newPosition === 28) {
     if (!room.gameState.activePlayerQuests) room.gameState.activePlayerQuests = {};
     const quest = ILLEGAL_JOBS_DECK[Math.floor(Math.random() * ILLEGAL_JOBS_DECK.length)];
     const activeQuest = {
@@ -763,8 +765,6 @@ export function rollDice(socketId) {
     expiredEffects = cardEffectService.decrementLaps(room, socketId);
     checkPlayerQuestOnPassGo(room, socketId);
   }
-
-  const targetSquare = BOARD_DATA.find(s => s.id === newPosition);
   let offerProperty = null;
   let rentPaidData = null;
 
