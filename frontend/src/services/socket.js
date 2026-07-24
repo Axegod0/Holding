@@ -36,15 +36,15 @@ const BACKEND_URL = getBackendUrl();
  */
 export const socket = io(BACKEND_URL, {
   autoConnect: true,
-  // WebSocket öncelikli, XHR polling yedekli bağlantı (Proxy ve Nginx reverse proxy uyumu için):
-  transports: ['websocket', 'polling'],
-  upgrade: true,
+  // Sadece WebSocket kullan — XHR polling transport hatasını tamamen ortadan kaldırır
+  transports: ['websocket'],
+  upgrade: false,
   
-  // Reconnection ve esnek zaman aşımı ayarları:
+  // Reconnection ayarları:
   reconnection: true,
   reconnectionAttempts: Infinity,
   reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
+  reconnectionDelayMax: 8000,
   randomizationFactor: 0.5,
   
   timeout: 20000,

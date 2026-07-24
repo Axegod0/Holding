@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Scale, ScrollText, Send, ChevronDown, ChevronUp, Sparkles, Volume2 } from 'lucide-react';
+import { MessageSquare, Scale, ScrollText, Send, ChevronDown, ChevronUp } from 'lucide-react';
 import useGameStore from '../store/gameStore.js';
 import socket from '../services/socket.js';
 
@@ -16,6 +16,11 @@ export default function ChatAndLogPanel() {
   const gameState = useGameStore(state => state.gameState);
   const isCourtroomActive = !!gameState?.courtroomState?.active;
   const messagesEndRef = useRef(null);
+
+  // Mevcut oyuncunun piyon rengi: gameState'ten hesapla
+  const mySocketId = socket.id;
+  const myColor = gameState?.playersState?.[mySocketId]?.color?.hex
+    || (gameState ? null : null);
 
   useEffect(() => {
     const handleGlobalMsg = (msg) => {
@@ -49,7 +54,7 @@ export default function ChatAndLogPanel() {
     }
   }, [activeTab, isMinimized, globalMessages, courtMessages, logs]);
 
-  // Switch to COURT_CHAT tab automatically when courtroom session starts
+  // Mahkeme başladığında COURT_CHAT'e otomatik geç
   useEffect(() => {
     if (isCourtroomActive) {
       setActiveTab('COURT_CHAT');
@@ -71,10 +76,18 @@ export default function ChatAndLogPanel() {
     setInputText('');
   };
 
+  const sendButtonColor = activeTab === 'COURT_CHAT'
+    ? 'bg-purple-500 hover:bg-purple-400'
+    : 'bg-amber-500 hover:bg-amber-400';
+
+  const inputBorderFocus = activeTab === 'COURT_CHAT'
+    ? 'focus:border-purple-500/50'
+    : 'focus:border-amber-500/50';
+
   return (
     <div className={`fixed bottom-4 right-4 z-40 transition-all duration-300 ${
       isMinimized ? 'w-72 h-12' : 'w-80 sm:w-96 h-96'
-    } bg-neutral-900/95 dark:bg-[#18181b]/95 backdrop-blur-md border border-neutral-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-white font-sans`}>
+    } bg-neutral-900/95 dark:bg-[#18181b]/98 backdrop-blur-md border border-neutral-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-white font-sans`}>
 
       {/* Panel Header & Tabs */}
       <div className="flex items-center justify-between bg-neutral-950/90 border-b border-neutral-800 px-3 py-2 shrink-0">
@@ -137,7 +150,7 @@ export default function ChatAndLogPanel() {
           onClick={() => setIsMinimized(prev => !prev)}
           className="p-1 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors cursor-pointer"
         >
-          {isMinimized ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          {isMinimized ? <ChevronDown className="w-4 h-4" /> : <ChevronDown className="w-4 h-4 rotate-180" />}
         </button>
       </div>
 
@@ -158,10 +171,19 @@ export default function ChatAndLogPanel() {
                 globalMessages.map(msg => (
                   <div key={msg.id} className="flex flex-col gap-0.5 bg-neutral-900/60 p-2 rounded-xl border border-neutral-800/80">
                     <div className="flex items-center justify-between text-[10px] font-mono">
-                      <span className="font-bold text-amber-400">{msg.senderName}</span>
+                      <span className="flex items-center gap-1.5 font-bold">
+                        {/* Piyon rengi dot */}
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0 inline-block shadow-sm"
+                          style={{ backgroundColor: msg.senderColorHex || '#EAB308' }}
+                        />
+                        <span style={{ color: msg.senderColorHex || '#EAB308' }}>
+                          {msg.senderName}
+                        </span>
+                      </span>
                       <span className="text-neutral-500">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <p className="text-neutral-200 text-xs leading-relaxed">{msg.message}</p>
+                    <p className="text-neutral-200 text-xs leading-relaxed pl-3.5">{msg.message}</p>
                   </div>
                 ))
               )
@@ -179,10 +201,20 @@ export default function ChatAndLogPanel() {
                 courtMessages.map(msg => (
                   <div key={msg.id} className="flex flex-col gap-0.5 bg-purple-950/30 p-2 rounded-xl border border-purple-500/30">
                     <div className="flex items-center justify-between text-[10px] font-mono">
-                      <span className="font-bold text-purple-300">{msg.senderName} (Duruşma)</span>
+                      <span className="flex items-center gap-1.5 font-bold">
+                        {/* Piyon rengi dot */}
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0 inline-block shadow-sm"
+                          style={{ backgroundColor: msg.senderColorHex || '#A855F7' }}
+                        />
+                        <span style={{ color: msg.senderColorHex || '#A855F7' }}>
+                          {msg.senderName}
+                        </span>
+                        <span className="text-neutral-500 font-normal">(Duruşma)</span>
+                      </span>
                       <span className="text-neutral-500">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <p className="text-purple-100 text-xs leading-relaxed">{msg.message}</p>
+                    <p className="text-purple-100 text-xs leading-relaxed pl-3.5">{msg.message}</p>
                   </div>
                 ))
               )
@@ -228,12 +260,12 @@ export default function ChatAndLogPanel() {
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder={activeTab === 'GLOBAL_CHAT' ? "Masa sohbetine yazın..." : "Duruşma kanalına yazın..."}
                 maxLength={200}
-                className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500/50"
+                className={`flex-1 bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none ${inputBorderFocus}`}
               />
               <button
                 type="submit"
                 disabled={!inputText.trim()}
-                className="p-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black font-bold transition-all cursor-pointer"
+                className={`p-2 rounded-xl ${sendButtonColor} disabled:opacity-40 text-${activeTab === 'COURT_CHAT' ? 'white' : 'black'} font-bold transition-all cursor-pointer`}
               >
                 <Send className="w-3.5 h-3.5" />
               </button>

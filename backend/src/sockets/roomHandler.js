@@ -625,11 +625,13 @@ export function registerRoomHandlers(io, socket) {
 
     const sender = room.players.find(p => p.id === socket.id);
     const senderName = sender?.name || 'Oyuncu';
+    const senderColorHex = sender?.color?.hex || '#EAB308';
 
     const msgObj = {
       id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       senderId: socket.id,
       senderName,
+      senderColorHex,
       message: (message || '').trim().substring(0, 200),
       timestamp: Date.now(),
       tab: 'GLOBAL_CHAT'
@@ -648,11 +650,13 @@ export function registerRoomHandlers(io, socket) {
 
     const sender = room.players.find(p => p.id === socket.id);
     const senderName = sender?.name || 'Oyuncu';
+    const senderColorHex = sender?.color?.hex || '#A855F7';
 
     const msgObj = {
       id: 'court_msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       senderId: socket.id,
       senderName,
+      senderColorHex,
       message: (message || '').trim().substring(0, 200),
       timestamp: Date.now(),
       tab: 'COURT_CHAT'

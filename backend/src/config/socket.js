@@ -12,10 +12,10 @@ export function initializeSocket(httpServer) {
       origin: "*",
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     },
-    transports: ["websocket", "polling"],
-    allowEIO3: true,
-    pingTimeout: 20000,
-    pingInterval: 25000
+    transports: ["websocket"],
+    allowUpgrades: false,
+    pingTimeout: 30000,
+    pingInterval: 20000
   });
 
   io.on('connection', (socket) => {
